@@ -10,6 +10,9 @@ export const S = {
   result: { correct: 'Đúng', wrong: 'Sai', youChose: 'Bạn chọn', correctAnswer: 'Đáp án đúng', explanation: 'Giải thích', strategy: 'Mẹo nhận biết', distractors: 'Vì sao các đáp án khác sai', analyzeMistake: 'Phân tích lỗi sai', backToPaste: 'Phân tích cụm khác' },
   errorPanel: { title: 'Vì sao bạn chọn sai?', hint: 'Chọn một hoặc nhiều lý do, thêm ghi chú nếu muốn.', notePlaceholder: 'Ghi chú thêm (không bắt buộc)…', submit: 'Gửi', thinking: 'Đang phân tích…', diagnosis: 'Chẩn đoán', fixAdvice: 'Cách sửa' },
   errorTag: { no_grammar: 'Không biết ngữ pháp', no_structure: 'Không biết cấu trúc', no_vocab: 'Không biết từ vựng', misclick: 'Bấm nhầm', misread: 'Đọc lướt hiểu sai', time_pressure: 'Hết giờ đoán bừa', trap_similar: 'Bị bẫy đáp án gần giống' } satisfies Record<ErrorTag, string>,
+  tabs: { history: 'Lịch sử', stats: 'Thống kê', settings: 'Cài đặt' },
+  history: { empty: 'Chưa có câu hỏi nào được lưu.', countLabel: (n: number) => `${n} câu` },
+  stats: { accuracy: 'Tỷ lệ đúng', attempted: 'Số câu đã làm', empty: 'Chưa đủ dữ liệu để thống kê.' },
   settings: { title: 'Cài đặt', provider: 'Provider', baseUrl: 'Base URL', baseUrlHint: 'Để trống để dùng endpoint mặc định của provider.', apiKey: 'API key', apiKeyWarning: 'API key được lưu không mã hoá trong bộ nhớ của Chrome. Ai truy cập được profile Chrome của bạn đều đọc được nó.', model: 'Model', supportsVision: 'Model này nhận được ảnh', explanationLanguage: 'Ngôn ngữ giải thích', langVi: 'Tiếng Việt', langEn: 'Tiếng Anh', langBilingual: 'Song ngữ', captureImages: 'Bắt ảnh trong câu hỏi', minSelectionChars: 'Số ký tự tối thiểu để hiện nút', testConnection: 'Kiểm tra kết nối', testing: 'Đang kiểm tra…', testOk: 'Kết nối thành công.', save: 'Lưu', saved: 'Đã lưu.', required: 'Bắt buộc' },
   common: { retry: 'Thử lại', rawOutput: 'Xem dữ liệu thô AI trả về', cancel: 'Huỷ' },
 } as const;
