@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getImage } from '../../shared/storage/history';
 import type { HistoryRow } from '../../shared/storage/queries';
 import { S } from '../../shared/strings';
+import { RetryPanel } from './RetryPanel';
 
 function ImageStrip({ ids }: { ids: string[] }) {
   const [urls, setUrls] = useState<string[]>([]);
@@ -22,10 +23,10 @@ function ImageStrip({ ids }: { ids: string[] }) {
 export function QuestionDetail({ row, onClose, onAttemptRecorded }: {
   row: HistoryRow;
   onClose: () => void;
-  /** Task 6 calls this after a retry so the list can refresh. Unused until then. */
+  /** Called after a retry so the list can refresh. */
   onAttemptRecorded: () => void;
 }) {
-  void onAttemptRecorded;
+  const [retrying, setRetrying] = useState(false);
   const { question, analysis, firstAttempt, attempts } = row;
 
   return (
@@ -35,11 +36,12 @@ export function QuestionDetail({ row, onClose, onAttemptRecorded }: {
       {question.passage && <p className="text-xs whitespace-pre-wrap text-gray-500">{question.passage}</p>}
       <p className="text-sm">{question.stem}</p>
 
+      {/* While retrying, nothing on screen may give the answer away. */}
       <div className="text-sm text-gray-700">
-        {question.choices.map((choice) => <div key={choice.label} className={choice.label === analysis?.correctAnswer ? 'font-medium' : ''}>{choice.label}. {choice.text}</div>)}
+        {question.choices.map((choice) => <div key={choice.label} className={!retrying && choice.label === analysis?.correctAnswer ? 'font-medium' : ''}>{choice.label}. {choice.text}</div>)}
       </div>
 
-      {firstAttempt && <p className="text-sm">{S.history.yourAnswer} {firstAttempt.userAnswer ?? S.review.notAttempted} · {S.result.correctAnswer} {analysis?.correctAnswer}</p>}
+      {!retrying && firstAttempt && <p className="text-sm">{S.history.yourAnswer} {firstAttempt.userAnswer ?? S.review.notAttempted} · {S.result.correctAnswer} {analysis?.correctAnswer}</p>}
 
       {analysis && (
         <>
@@ -56,6 +58,11 @@ export function QuestionDetail({ row, onClose, onAttemptRecorded }: {
       )}
 
       <p className="text-xs text-gray-500">{S.history.attemptCount(attempts.length)}</p>
+
+      {/* A question with no stored analysis has no answer to check against, so it cannot be retried. */}
+      {analysis && (retrying
+        ? <RetryPanel row={row} onDone={onAttemptRecorded} />
+        : <button className="rounded border px-3 py-1 text-sm" onClick={() => setRetrying(true)}>{S.history.retry}</button>)}
 
       <button className="rounded border px-3 py-1 text-sm" onClick={onClose}>{S.history.close}</button>
     </div>
