@@ -4,8 +4,17 @@
 **Status:** Design approved, ready for implementation planning
 **Implemented by:** Codex · **Reviewed by:** project owner
 
-> Doc language is English to keep token cost down. This is unrelated to the
-> product's `explanationLanguage` setting, which defaults to Vietnamese.
+> **Language conventions.** This document, all code, comments and commit
+> messages are in English to keep token cost down.
+>
+> The product itself is Vietnamese: **all UI strings ship in Vietnamese**, and
+> the button labels written in English throughout this spec are descriptions,
+> not the strings to implement. AI explanations follow the
+> `explanationLanguage` setting, which defaults to Vietnamese.
+>
+> UI strings live in one `src/shared/strings.ts` module rather than being
+> inlined across components — so the English-doc / Vietnamese-UI split has
+> exactly one place where it can go wrong.
 
 ---
 
@@ -62,6 +71,7 @@ src/
   shared/
     types.ts              # shared entities
     messages.ts           # discriminated union of all messages + typed send/on helpers
+    strings.ts            # every user-facing string, in Vietnamese
     storage/
       settings.ts         # chrome.storage.local wrapper
       history.ts          # IndexedDB CRUD via idb
