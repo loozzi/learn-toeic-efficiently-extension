@@ -1,5 +1,8 @@
+import { Settings as SettingsIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { PORT_PANEL, type PanelEvent, type PendingCapture, sendRequest } from '../shared/messages';
+import { IconButton } from '../shared/components/IconButton';
+import { ThemeToggle } from '../shared/components/ThemeToggle';
 import { getSettings, isConfigured } from '../shared/storage/settings';
 import { S } from '../shared/strings';
 import type { ImageInput, Question, QuestionAnalysis } from '../shared/types';
@@ -15,6 +18,30 @@ export type PanelState =
   | { view: 'paste' }
   | { view: 'review'; sessionId: string; questions: Question[]; visionSkipped: boolean }
   | { view: 'result'; questions: Question[]; analyses: QuestionAnalysis[]; answers: Record<string, string | undefined>; attemptIdByQuestionId: Record<string, string> };
+
+const STEP_ORDER = ['paste', 'review', 'result'] as const;
+const STEP_LABEL = { paste: S.steps.paste, review: S.steps.review, result: S.steps.result };
+
+function Steps({ current }: { current: (typeof STEP_ORDER)[number] }) {
+  const index = STEP_ORDER.indexOf(current);
+  return (
+    <ol className="flex items-center gap-1.5 text-xs">
+      {STEP_ORDER.map((step, i) => (
+        <li key={step} className="flex items-center gap-1.5">
+          <span
+            className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1 font-semibold transition-colors duration-150 ${
+              i < index ? 'bg-accent text-accent-foreground' : i === index ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted-foreground'
+            }`}
+          >
+            {i + 1}
+          </span>
+          <span className={i === index ? 'font-medium text-foreground' : 'text-muted-foreground'}>{STEP_LABEL[step]}</span>
+          {i < STEP_ORDER.length - 1 && <span className="mx-0.5 h-px w-3 bg-border" />}
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 export function App() {
   const [state, setState] = useState<PanelState>({ view: 'loading' });
@@ -66,7 +93,11 @@ export function App() {
   function renderBody() {
     switch (state.view) {
       case 'loading':
-        return null;
+        return (
+          <div className="flex h-full items-center justify-center">
+            <span className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-primary" />
+          </div>
+        );
       case 'onboarding':
         return <Onboarding />;
       case 'paste':
@@ -87,10 +118,24 @@ export function App() {
     }
   }
 
+  const step = state.view === 'paste' || state.view === 'review' || state.view === 'result' ? state.view : null;
+
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-background">
+      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-surface px-3 py-2.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">I</span>
+          {step ? <Steps current={step} /> : <span className="text-sm font-semibold">{S.appName}</span>}
+        </div>
+        <div className="flex shrink-0 items-center gap-0.5">
+          <ThemeToggle />
+          <IconButton aria-label={S.common.openDashboard} title={S.common.openDashboard} onClick={() => chrome.runtime.openOptionsPage()}>
+            <SettingsIcon size={16} strokeWidth={2} />
+          </IconButton>
+        </div>
+      </header>
+
       <div className="flex-1 overflow-auto">{renderBody()}</div>
-      <button className="border-t px-4 py-2 text-left text-xs text-blue-700" onClick={() => chrome.runtime.openOptionsPage()}>{S.common.openDashboard}</button>
     </div>
   );
 }

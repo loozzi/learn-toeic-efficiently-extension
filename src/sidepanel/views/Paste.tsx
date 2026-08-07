@@ -1,6 +1,8 @@
+import { ArrowRight, Crop, ImageIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { SerializedError } from '../../shared/errors';
 import { sendRequest } from '../../shared/messages';
+import { Button } from '../../shared/components/Button';
 import { S } from '../../shared/strings';
 import type { ImageInput, Question } from '../../shared/types';
 import { ErrorBanner } from '../components/ErrorBanner';
@@ -47,13 +49,39 @@ export function Paste({ onParsed, snipped = [] }: { onParsed: (payload: ParsedPa
   }
 
   return (
-    <div className="space-y-3 p-4">
-      <textarea className="h-64 w-full resize-none rounded border p-2 text-sm" placeholder={S.paste.placeholder} value={text} onChange={(event) => setText(event.target.value)} onPaste={onPaste} />
-      {allImages.length > 0 && <p className="text-xs text-gray-500">{S.paste.imageCount(allImages.length)}</p>}
-      {empty && <p className="text-sm text-red-600">{S.paste.empty}</p>}
+    <div className="flex h-full flex-col gap-3 p-4">
+      <textarea
+        className="h-56 w-full flex-1 resize-none rounded-lg border border-border bg-surface p-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        placeholder={S.paste.placeholder}
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        onPaste={onPaste}
+      />
+
+      {allImages.length > 0 && (
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <ImageIcon size={13} strokeWidth={2} />
+          {S.paste.imageCount(allImages.length)}
+        </p>
+      )}
+
+      {empty && <p className="text-sm text-destructive">{S.paste.empty}</p>}
       {error && <ErrorBanner error={error} onRetry={() => void submit()} />}
-      <button className="w-full rounded border px-3 py-2" onClick={() => void snip()}>{sniping ? S.paste.sniping : S.paste.snip}</button>
-      <button className="w-full rounded bg-blue-600 px-3 py-2 text-white disabled:opacity-50" disabled={busy} onClick={() => void submit()}>{busy ? S.paste.parsing : S.paste.submit}</button>
+
+      <div className="flex items-center gap-2">
+        <Button className="flex-1" icon={<Crop size={15} strokeWidth={2} />} onClick={() => void snip()} disabled={sniping}>
+          {sniping ? S.paste.sniping : S.paste.snip}
+        </Button>
+        <Button
+          variant="primary"
+          className="flex-[2]"
+          icon={!busy ? <ArrowRight size={15} strokeWidth={2} /> : undefined}
+          disabled={busy}
+          onClick={() => void submit()}
+        >
+          {busy ? S.paste.parsing : S.paste.submit}
+        </Button>
+      </div>
     </div>
   );
 }

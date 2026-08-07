@@ -1,4 +1,6 @@
+import { ArrowLeft, CheckCircle2, Lightbulb, XCircle } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { Button } from '../../shared/components/Button';
 import { S } from '../../shared/strings';
 import type { Question, QuestionAnalysis } from '../../shared/types';
 
@@ -22,41 +24,47 @@ export function Result({ questions, analyses, answers, attemptIdByQuestionId, re
         const correct = picked === analysis.correctAnswer;
 
         return (
-          <div key={question.id} data-testid={`result-${question.id}`} className="space-y-2 rounded border p-3">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-medium">{question.order}.</span>
-              <span className={correct ? 'text-green-700' : 'text-red-700'}>{correct ? S.result.correct : S.result.wrong}</span>
-              {!correct && <span className="text-gray-600">{S.result.youChose} {picked ?? S.review.notAttempted}</span>}
-              <span className="text-gray-600">{S.result.correctAnswer} {analysis.correctAnswer}</span>
+          <div key={question.id} data-testid={`result-${question.id}`} className={`space-y-2.5 rounded-lg border p-3 shadow-sm ${correct ? 'border-accent/30 bg-accent/5' : 'border-destructive/30 bg-destructive/5'}`}>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+              <span className="font-medium text-foreground">{question.order}.</span>
+              <span className={`inline-flex items-center gap-1 font-medium ${correct ? 'text-accent' : 'text-destructive'}`}>
+                {correct ? <CheckCircle2 size={15} strokeWidth={2} /> : <XCircle size={15} strokeWidth={2} />}
+                {correct ? S.result.correct : S.result.wrong}
+              </span>
+              {!correct && <span className="text-muted-foreground">{S.result.youChose} {picked ?? S.review.notAttempted}</span>}
+              <span className="text-muted-foreground">{S.result.correctAnswer} {analysis.correctAnswer}</span>
             </div>
 
-            <p className="text-sm">{question.stem}</p>
+            <p className="text-sm text-foreground">{question.stem}</p>
 
             <div className="text-sm">
-              <p className="font-medium">{S.result.explanation}</p>
-              <p className="whitespace-pre-wrap text-gray-700">{analysis.explanation}</p>
+              <p className="font-medium text-foreground">{S.result.explanation}</p>
+              <p className="whitespace-pre-wrap text-muted-foreground">{analysis.explanation}</p>
             </div>
 
-            <div className="text-sm">
-              <p className="font-medium">{S.result.strategy}</p>
-              <p className="whitespace-pre-wrap text-gray-700">{analysis.strategy}</p>
+            <div className="flex gap-1.5 text-sm">
+              <Lightbulb size={15} strokeWidth={2} className="mt-0.5 shrink-0 text-warning" />
+              <div>
+                <p className="font-medium text-foreground">{S.result.strategy}</p>
+                <p className="whitespace-pre-wrap text-muted-foreground">{analysis.strategy}</p>
+              </div>
             </div>
 
             {analysis.distractorNotes && Object.keys(analysis.distractorNotes).length > 0 && (
-              <div className="text-xs text-gray-600">
-                <p className="font-medium">{S.result.distractors}</p>
+              <div className="text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">{S.result.distractors}</p>
                 {Object.entries(analysis.distractorNotes).map(([label, note]) => <div key={label}>{label}. {note}</div>)}
               </div>
             )}
 
-            <p className="text-xs text-gray-400">{analysis.topic}</p>
+            <p className="inline-block rounded-full bg-surface-muted px-2 py-0.5 text-xs text-muted-foreground">{analysis.topic}</p>
 
             {!correct && renderErrorPanel(question.id, attemptIdByQuestionId[question.id])}
           </div>
         );
       })}
 
-      <button className="w-full rounded border px-3 py-2" onClick={onRestart}>{S.result.backToPaste}</button>
+      <Button className="w-full" icon={<ArrowLeft size={15} strokeWidth={2} />} onClick={onRestart}>{S.result.backToPaste}</Button>
     </div>
   );
 }
