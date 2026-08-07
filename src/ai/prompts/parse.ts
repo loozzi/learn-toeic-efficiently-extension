@@ -1,0 +1,5 @@
+import type { ExplanationLanguage } from '../../shared/types';
+import { languageInstruction } from './language';
+export function buildParsePrompt(language: ExplanationLanguage): string {
+  return ['You split raw text copied from a TOEIC practice test into structured questions.', '', 'Rules:', '- Return at most 20 questions. If the input has more, return the first 20.', '- NEVER include the correct answer, and never hint at which answer is correct. Your only job here is splitting.', '- `order` is 1-based and follows input order.', '- Keep original English wording. Do not translate or fix it.', '- choices uses source labels; if missing assign A, B, C, D.', '- Put shared Part 6/7 passages in `passage`.', '- Set `toeicPart` only when confident.', '- If no multiple-choice question exists, return `{"questions": []}`.', '', languageInstruction(language), '', 'Reply with ONLY this JSON object, no prose and no markdown fences:', '{', '  "questions": [', '    { "order": 1, "stem": "string", "passage": "string (optional)", "choices": [{ "label": "A", "text": "string" }], "toeicPart": 5 }', '  ]', '}'].join('\n');
+}
