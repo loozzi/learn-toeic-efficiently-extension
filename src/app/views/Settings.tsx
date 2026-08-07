@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { type ErrorCode, appError, deserializeError, errorMessage } from '../../shared/errors';
 import { sendRequest } from '../../shared/messages';
+import { buildExport, importBundle, wipeAll } from '../../shared/storage/exportImport';
 import { DEFAULT_SETTINGS, getSettings, saveSettings } from '../../shared/storage/settings';
 import { S } from '../../shared/strings';
 import type { ExplanationLanguage, Provider, Settings as SettingsType } from '../../shared/types';
@@ -18,6 +19,8 @@ export function Settings() {
   const [touched, setTouched] = useState(false);
   const [saved, setSaved] = useState(false);
   const [test, setTest] = useState<TestState>({ status: 'idle' });
+  const [withImages, setWithImages] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => { void getSettings().then(setDraft); }, []);
 
@@ -43,6 +46,32 @@ export function Settings() {
     // failure arrives as a SerializedError. Both go through the same table.
     const error = reply.ok ? appError(reply.data.message as ErrorCode) : deserializeError(reply.error);
     setTest({ status: 'fail', message: errorMessage(error) });
+  }
+
+  async function doExport() {
+    const bundle = await buildExport(withImages);
+    const url = URL.createObjectURL(new Blob([JSON.stringify(bundle)], { type: 'application/json' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `imen-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function doImport(file: File | undefined) {
+    if (!file) return;
+    try {
+      const result = await importBundle(JSON.parse(await file.text()));
+      setNotice(S.settings.importDone(result.added, result.skipped));
+    } catch {
+      setNotice(S.settings.importFailed);
+    }
+  }
+
+  async function doWipe() {
+    if (!confirm(S.settings.wipeConfirm)) return;
+    await wipeAll();
+    setNotice(S.settings.wipeDone);
   }
 
   return (
@@ -107,6 +136,28 @@ export function Settings() {
         {test.status === 'ok' && <span className="text-sm text-green-700">{S.settings.testOk}</span>}
         {test.status === 'fail' && <span className="text-sm text-red-600">{test.message}</span>}
       </div>
+
+      <section className="space-y-2 border-t pt-4">
+        <h2 className="text-sm font-medium">{S.settings.exportTitle}</h2>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={withImages} onChange={(event) => setWithImages(event.target.checked)} />
+          {S.settings.exportWithImages}
+        </label>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button className="rounded border px-3 py-2 text-sm" onClick={() => void doExport()}>{S.settings.exportButton}</button>
+
+          <label className="cursor-pointer rounded border px-3 py-2 text-sm">
+            {S.settings.importButton}
+            <input type="file" accept="application/json" className="hidden" onChange={(event) => void doImport(event.target.files?.[0])} />
+          </label>
+
+          <button className="rounded border border-red-400 px-3 py-2 text-sm text-red-700" onClick={() => void doWipe()}>{S.settings.wipeButton}</button>
+        </div>
+
+        {notice && <p className="text-sm text-gray-700">{notice}</p>}
+      </section>
     </div>
   );
 }
