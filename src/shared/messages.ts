@@ -27,14 +27,14 @@ export async function sendRequest<T extends RequestType>(type: T, req: RequestMa
   return (await chrome.runtime.sendMessage({ type, ...req })) as Reply<T>;
 }
 
-export type Handlers = { [T in RequestType]?: (req: RequestMap[T]['req']) => Promise<RequestMap[T]['res']> };
+export type Handlers = { [T in RequestType]?: (req: RequestMap[T]['req'], sender: chrome.runtime.MessageSender) => Promise<RequestMap[T]['res']> };
 export function registerHandlers(handlers: Handlers): void {
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const type = (message as { type?: RequestType })?.type;
     if (!type) return false;
     const handler = handlers[type];
     if (!handler) return false;
-    (handler as (request: unknown) => Promise<unknown>)(message)
+    (handler as (request: unknown, sender: unknown) => Promise<unknown>)(message, sender)
       .then((data) => sendResponse({ ok: true, data }))
       .catch((error) => sendResponse({ ok: false, error: serializeError(error) }));
     return true;
