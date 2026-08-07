@@ -1,5 +1,5 @@
 import { type SerializedError, serializeError } from './errors';
-import type { AnswerSubmission, ErrorTag, ImageInput, ProviderConfig, Question, QuestionAnalysis } from './types';
+import type { AnswerSubmission, ErrorTag, ImageInput, ProviderConfig, Question, QuestionAnalysis, TokenUsage } from './types';
 import type { ImageRef } from '../content/imageScan';
 import type { RectLike } from '../content/selection';
 
@@ -17,7 +17,8 @@ export interface RequestMap {
   START_SNIP: { req: Record<string, never>; res: { started: boolean } };
   SNIP_RESULT: { req: { bounds: RectLike; dpr: number }; res: { ok: boolean } };
   PARSE_TEXT: { req: { rawText: string; images: ImageInput[]; origin: 'paste' | 'selection'; sourceUrl?: string; sourceTitle?: string }; res: { sessionId: string; questions: Question[]; visionSkipped: boolean } };
-  ANALYZE: { req: { sessionId: string; answers: AnswerSubmission[]; skippedQuestionIds: string[] }; res: { analyses: QuestionAnalysis[]; attemptIdByQuestionId: Record<string, string> } };
+  ANALYZE: { req: { requestId: string; sessionId: string; answers: AnswerSubmission[]; skippedQuestionIds: string[] }; res: { analyses: QuestionAnalysis[]; attemptIdByQuestionId: Record<string, string>; usage?: TokenUsage } };
+  CANCEL_ANALYZE: { req: { requestId: string }; res: { ok: true } };
   TEST_CONNECTION: { req: { config: ProviderConfig }; res: { ok: boolean; message: string } };
 }
 export type RequestType = keyof RequestMap;

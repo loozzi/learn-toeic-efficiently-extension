@@ -2,21 +2,27 @@ import { ArrowLeft, CheckCircle2, Lightbulb, XCircle } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '../../shared/components/Button';
 import { S } from '../../shared/strings';
-import type { Question, QuestionAnalysis } from '../../shared/types';
+import type { Question, QuestionAnalysis, TokenUsage } from '../../shared/types';
 
 /** Purely presentational: the shell supplies renderErrorPanel, so this view knows nothing about ports or streaming. */
-export function Result({ questions, analyses, answers, attemptIdByQuestionId, renderErrorPanel, onRestart }: {
+export function Result({ questions, analyses, answers, attemptIdByQuestionId, renderErrorPanel, onRestart, usage }: {
   questions: Question[];
   analyses: QuestionAnalysis[];
   answers: Record<string, string | undefined>;
   attemptIdByQuestionId: Record<string, string>;
   renderErrorPanel: (questionId: string, attemptId: string) => ReactNode;
   onRestart: () => void;
+  usage?: TokenUsage;
 }) {
   const byId = new Map(analyses.map((analysis) => [analysis.questionId, analysis]));
 
   return (
     <div className="space-y-4 p-4">
+      {usage && (
+        <div className="rounded-xl border border-border bg-surface p-3 text-xs text-muted-foreground shadow-sm">
+          {S.result.tokenUsage(usage.inputTokens, usage.outputTokens, usage.totalTokens)}
+        </div>
+      )}
       {questions.map((question) => {
         const analysis = byId.get(question.id);
         if (!analysis) return null;

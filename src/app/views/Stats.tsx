@@ -3,10 +3,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { type SerializedError, deserializeError, errorMessage } from '../../shared/errors';
 import { PORT_WEAKNESS, type WeaknessEvent } from '../../shared/messages';
 import { type HistoryRow, listHistory } from '../../shared/storage/queries';
+import { getAllSessions } from '../../shared/storage/history';
 import { computeStats } from '../../shared/storage/stats';
 import { Button } from '../../shared/components/Button';
 import { S } from '../../shared/strings';
 import { StatBar } from '../components/StatBar';
+import type { Session } from '../../shared/types';
 
 type Summary =
   | { kind: 'idle' }
@@ -28,12 +30,23 @@ function KpiCard({ icon, label, value }: { icon: React.ReactNode; label: string;
 
 export function Stats() {
   const [rows, setRows] = useState<HistoryRow[] | null>(null);
+  const [sessions, setSessions] = useState<Session[] | null>(null);
   const [includeRetries, setIncludeRetries] = useState(false);
   const [summary, setSummary] = useState<Summary>({ kind: 'idle' });
 
-  useEffect(() => { void listHistory().then(setRows); }, []);
+  useEffect(() => { void Promise.all([listHistory(), getAllSessions()]).then(([history, allSessions]) => { setRows(history); setSessions(allSessions); }); }, []);
 
   const stats = useMemo(() => (rows ? computeStats(rows, { includeRetries }) : null), [rows, includeRetries]);
+  const tokenUsage = useMemo(() => {
+    if (!sessions) return null;
+    return sessions.reduce((accumulator, session) => {
+      if (!session.analysisUsage) return accumulator;
+      accumulator.inputTokens += session.analysisUsage.inputTokens;
+      accumulator.outputTokens += session.analysisUsage.outputTokens;
+      accumulator.totalTokens += session.analysisUsage.totalTokens;
+      return accumulator;
+    }, { inputTokens: 0, outputTokens: 0, totalTokens: 0 });
+  }, [sessions]);
 
   function summarise() {
     if (!stats) return;
@@ -72,6 +85,17 @@ export function Stats() {
           {S.stats.includeRetries}
         </label>
       </div>
+
+      {tokenUsage && (
+        <section className="space-y-2.5 rounded-xl border border-border bg-surface p-4 shadow-sm">
+          <h3 className="text-sm font-medium text-foreground">{S.stats.tokenUsage}</h3>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <KpiCard icon={<Sparkles size={18} strokeWidth={2} />} label={S.stats.inputTokens} value={tokenUsage.inputTokens} />
+            <KpiCard icon={<Sparkles size={18} strokeWidth={2} />} label={S.stats.outputTokens} value={tokenUsage.outputTokens} />
+            <KpiCard icon={<Sparkles size={18} strokeWidth={2} />} label={S.stats.totalTokens} value={tokenUsage.totalTokens} />
+          </div>
+        </section>
+      )}
 
       <section className="space-y-2.5 rounded-xl border border-border bg-surface p-4 shadow-sm">
         <h3 className="text-sm font-medium text-foreground">{S.stats.topMissed}</h3>

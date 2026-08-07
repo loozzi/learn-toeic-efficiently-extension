@@ -50,6 +50,10 @@ export async function putSession(session: Session): Promise<void> {
   await (await openDb()).put('sessions', session);
 }
 
+export async function getSession(id: string): Promise<Session | undefined> {
+  return (await openDb()).get('sessions', id);
+}
+
 export async function findQuestion(id: string): Promise<Question | undefined> {
   return (await openDb()).get('questions', id);
 }

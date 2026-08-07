@@ -1,4 +1,4 @@
-export type ErrorCode = 'NO_API_KEY' | 'AUTH' | 'RATE_LIMIT' | 'NETWORK' | 'SCHEMA' | 'PARSE_EMPTY' | 'TOO_MANY' | 'NO_VISION' | 'UNKNOWN';
+export type ErrorCode = 'NO_API_KEY' | 'AUTH' | 'RATE_LIMIT' | 'NETWORK' | 'SCHEMA' | 'PARSE_EMPTY' | 'TOO_MANY' | 'NO_VISION' | 'CANCELLED' | 'UNKNOWN';
 
 export interface AppError extends Error { readonly isAppError: true; code: ErrorCode; detail?: string; raw?: string; }
 
@@ -21,6 +21,7 @@ const MESSAGES: Record<ErrorCode, string> = {
   PARSE_EMPTY: 'Không tách được câu hỏi nào từ nội dung này.',
   TOO_MANY: 'Vượt quá 20 câu cho một lần phân tích. Hãy bớt bớt lại.',
   NO_VISION: 'Model hiện tại không nhận ảnh. Ảnh đã được bỏ qua.',
+  CANCELLED: 'Yêu cầu đã bị huỷ.',
   UNKNOWN: 'Đã có lỗi không xác định. Bạn có thể thử lại.',
 };
 

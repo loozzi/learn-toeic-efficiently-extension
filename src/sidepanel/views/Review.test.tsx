@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { S } from '../../shared/strings';
 import type { Question } from '../../shared/types';
@@ -19,7 +19,7 @@ describe('Review view', () => {
     renderReview();
     await userEvent.click(within(screen.getByTestId('question-q1')).getByRole('button', { name: 'B' }));
     await userEvent.click(screen.getByRole('button', { name: S.review.analyzeButton }));
-    expect(sendRequest).toHaveBeenCalledWith('ANALYZE', { sessionId: 's1', answers: [{ questionId: 'q1', userAnswer: 'B' }, { questionId: 'q2', userAnswer: undefined }], skippedQuestionIds: [] });
+    expect(sendRequest).toHaveBeenCalledWith('ANALYZE', expect.objectContaining({ sessionId: 's1', answers: [{ questionId: 'q1', userAnswer: 'B' }, { questionId: 'q2', userAnswer: undefined }], skippedQuestionIds: [], requestId: expect.any(String) }));
   });
 
   it('keeps the analyze button enabled with nothing ticked', () => { renderReview(); expect(screen.getByRole('button', { name: S.review.analyzeButton })).toBeEnabled(); });
@@ -48,5 +48,19 @@ describe('Review view', () => {
     await userEvent.click(screen.getByRole('button', { name: S.review.analyzeButton }));
     expect(await screen.findByRole('button', { name: S.common.retry })).toBeInTheDocument();
     expect(screen.getByTestId('question-q1')).toBeInTheDocument();
+  });
+
+  it('shows a cancel button while the analysis request is in flight', async () => {
+    let resolveAnalyze: ((value: unknown) => void) | undefined;
+    sendRequest.mockImplementation((type: string) => {
+      if (type === 'ANALYZE') return new Promise((resolve) => { resolveAnalyze = resolve; });
+      return Promise.resolve({ ok: true, data: { ok: true } });
+    });
+    renderReview();
+    await userEvent.click(screen.getByRole('button', { name: S.review.analyzeButton }));
+    expect(screen.getByRole('button', { name: S.common.cancel })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: S.common.cancel }));
+    expect(sendRequest).toHaveBeenCalledWith('CANCEL_ANALYZE', expect.objectContaining({ requestId: expect.any(String) }));
+    await act(async () => { resolveAnalyze?.({ ok: false, error: { code: 'CANCELLED' } }); });
   });
 });

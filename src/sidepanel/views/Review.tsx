@@ -1,11 +1,11 @@
 import { CheckCircle2, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { SerializedError } from '../../shared/errors';
 import { sendRequest } from '../../shared/messages';
 import { Button } from '../../shared/components/Button';
 import { ChoiceButton } from '../../shared/components/ChoiceButton';
 import { S } from '../../shared/strings';
-import type { Question, QuestionAnalysis } from '../../shared/types';
+import type { Question, QuestionAnalysis, TokenUsage } from '../../shared/types';
 import { ErrorBanner } from '../components/ErrorBanner';
 
 export interface AnalyzedPayload {
@@ -13,6 +13,7 @@ export interface AnalyzedPayload {
   analyses: QuestionAnalysis[];
   answers: Record<string, string | undefined>;
   attemptIdByQuestionId: Record<string, string>;
+  usage?: TokenUsage;
 }
 
 export function Review({ sessionId, questions, visionSkipped, onAnalyzed }: { sessionId: string; questions: Question[]; visionSkipped: boolean; onAnalyzed: (payload: AnalyzedPayload) => void }) {
@@ -20,18 +21,39 @@ export function Review({ sessionId, questions, visionSkipped, onAnalyzed }: { se
   const [skipped, setSkipped] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<SerializedError | null>(null);
+  const requestIdRef = useRef<string | null>(null);
+  const cancelRequestedRef = useRef(false);
 
   const kept = questions.filter((question) => !skipped.includes(question.id));
   const ticked = kept.filter((question) => answers[question.id] != null).length;
+
+  useEffect(() => () => {
+    if (requestIdRef.current) void sendRequest('CANCEL_ANALYZE', { requestId: requestIdRef.current });
+  }, []);
 
   function pick(questionId: string, label: string) { setAnswers((current) => ({ ...current, [questionId]: current[questionId] === label ? undefined : label })); }
 
   async function analyze() {
     setError(null);
+    cancelRequestedRef.current = false;
+    const requestId = crypto.randomUUID();
+    requestIdRef.current = requestId;
     setBusy(true);
-    const reply = await sendRequest('ANALYZE', { sessionId, answers: kept.map((question) => ({ questionId: question.id, userAnswer: answers[question.id] })), skippedQuestionIds: skipped });
+    const reply = await sendRequest('ANALYZE', { requestId, sessionId, answers: kept.map((question) => ({ questionId: question.id, userAnswer: answers[question.id] })), skippedQuestionIds: skipped });
     setBusy(false);
-    if (reply.ok) onAnalyzed({ questions: kept, answers, ...reply.data }); else setError(reply.error);
+    if (requestIdRef.current !== requestId) return;
+    requestIdRef.current = null;
+    if (reply.ok) onAnalyzed({ questions: kept, answers, ...reply.data });
+    else if (!cancelRequestedRef.current && reply.error.code !== 'CANCELLED') setError(reply.error);
+  }
+
+  async function cancelAnalyze() {
+    const requestId = requestIdRef.current;
+    if (!requestId) return;
+    cancelRequestedRef.current = true;
+    setBusy(false);
+    requestIdRef.current = null;
+    await sendRequest('CANCEL_ANALYZE', { requestId });
   }
 
   return (
@@ -79,7 +101,10 @@ export function Review({ sessionId, questions, visionSkipped, onAnalyzed }: { se
 
       <div className="shrink-0 space-y-2 border-t border-border bg-surface p-3">
         <p className="text-xs text-muted-foreground">{S.review.counter(ticked, kept.length)}</p>
-        <Button variant="primary" className="w-full" disabled={busy} onClick={() => void analyze()}>{busy ? S.review.analyzing : S.review.analyzeButton}</Button>
+        <div className="flex gap-2">
+          {busy && <Button variant="outline" className="flex-1" onClick={() => void cancelAnalyze()}>{S.common.cancel}</Button>}
+          <Button variant="primary" className={busy ? 'flex-1' : 'w-full'} disabled={busy} onClick={() => void analyze()}>{busy ? S.review.analyzing : S.review.analyzeButton}</Button>
+        </div>
       </div>
     </div>
   );

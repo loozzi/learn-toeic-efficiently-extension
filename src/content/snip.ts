@@ -1,5 +1,6 @@
 import { S } from '../shared/strings';
 import type { RectLike } from './selection';
+import { getSurface } from './trigger';
 
 const MIN_EDGE = 8;
 
@@ -10,6 +11,7 @@ export function rectFromDrag(start: Point, end: Point): RectLike {
 }
 
 export function startSnip(shadow: ShadowRoot, onDone: (rect: RectLike | null) => void): () => void {
+  const surface = getSurface(shadow);
   const overlay = document.createElement('div');
   overlay.className = 'snip-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;cursor:crosshair;background:rgba(17,24,39,.25);';
@@ -22,7 +24,7 @@ export function startSnip(shadow: ShadowRoot, onDone: (rect: RectLike | null) =>
   box.style.cssText = 'position:fixed;border:2px solid #2563eb;background:rgba(37,99,235,.15);display:none;';
 
   overlay.append(box);
-  shadow.append(overlay, hint);
+  surface.append(overlay, hint);
 
   let start: Point | null = null;
 

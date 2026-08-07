@@ -17,4 +17,5 @@ describe('Result view', () => {
   it('shows explanation and strategy for every question', () => { renderResult(); expect(screen.getByText('exp1')).toBeInTheDocument(); expect(screen.getByText('str2')).toBeInTheDocument(); });
   it('offers the mistake-analysis panel only on wrong answers', () => { renderResult(); expect(within(screen.getByTestId('result-q1')).queryByTestId('error-panel')).not.toBeInTheDocument(); expect(within(screen.getByTestId('result-q2')).getByTestId('error-panel')).toBeInTheDocument(); });
   it('shows distractor notes when the model supplied them', () => { renderResult(); expect(screen.getByText(/wrong tense/)).toBeInTheDocument(); });
+  it('shows token usage when provided', () => { render(<Result questions={questions} analyses={analyses} answers={{ q1: 'B', q2: 'B' }} attemptIdByQuestionId={{ q1: 'a1', q2: 'a2' }} renderErrorPanel={() => <div data-testid="error-panel" />} onRestart={vi.fn()} usage={{ inputTokens: 12, outputTokens: 8, totalTokens: 20 }} />); expect(screen.getByText(S.result.tokenUsage(12, 8, 20))).toBeInTheDocument(); });
 });

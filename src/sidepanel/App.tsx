@@ -5,7 +5,7 @@ import { IconButton } from '../shared/components/IconButton';
 import { ThemeToggle } from '../shared/components/ThemeToggle';
 import { getSettings, isConfigured } from '../shared/storage/settings';
 import { S } from '../shared/strings';
-import type { ImageInput, Question, QuestionAnalysis } from '../shared/types';
+import type { ImageInput, Question, QuestionAnalysis, TokenUsage } from '../shared/types';
 import { ErrorPanel } from './components/ErrorPanel';
 import { Onboarding } from './components/Onboarding';
 import { Paste } from './views/Paste';
@@ -17,7 +17,7 @@ export type PanelState =
   | { view: 'onboarding' }
   | { view: 'paste' }
   | { view: 'review'; sessionId: string; questions: Question[]; visionSkipped: boolean }
-  | { view: 'result'; questions: Question[]; analyses: QuestionAnalysis[]; answers: Record<string, string | undefined>; attemptIdByQuestionId: Record<string, string> };
+  | { view: 'result'; questions: Question[]; analyses: QuestionAnalysis[]; answers: Record<string, string | undefined>; attemptIdByQuestionId: Record<string, string>; usage?: TokenUsage };
 
 const STEP_ORDER = ['paste', 'review', 'result'] as const;
 const STEP_LABEL = { paste: S.steps.paste, review: S.steps.review, result: S.steps.result };
@@ -111,6 +111,7 @@ export function App() {
             analyses={state.analyses}
             answers={state.answers}
             attemptIdByQuestionId={state.attemptIdByQuestionId}
+            usage={state.usage}
             renderErrorPanel={(questionId, attemptId) => <ErrorPanel questionId={questionId} attemptId={attemptId} />}
             onRestart={() => setState({ view: 'paste' })}
           />

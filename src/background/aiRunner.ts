@@ -3,12 +3,12 @@ import { buildAnalyzePrompt } from '../ai/prompts/analyze';
 import { FIX_MARKER, buildErrorPsychPrompt, splitDiagnosis } from '../ai/prompts/errorPsych';
 import { buildParsePrompt } from '../ai/prompts/parse';
 import { buildWeaknessPrompt } from '../ai/prompts/weakness';
-import { AnalyzeResultSchema, ParseResultSchema, parseJsonWithRepair } from '../ai/schema';
-import type { ChatPart } from '../ai/types';
+import { AnalyzeResultSchema, ParseResultSchema, parseJsonWithRepairWithUsage } from '../ai/schema';
+import type { ChatPart, ChatUsage } from '../ai/types';
 import { appError, serializeError } from '../shared/errors';
 import type { ErrorPsychEvent, RequestMap, WeaknessEvent } from '../shared/messages';
 import type { Stats } from '../shared/storage/stats';
-import { answerForAttempt, createSession, deleteQuestions, findQuestion, getAnalysis, getQuestionsBySession, putAnalyses, putErrorAnalysis, putQuestions, putSession, recordAttempt } from '../shared/storage/history';
+import { answerForAttempt, createSession, deleteQuestions, findQuestion, getAnalysis, getQuestionsBySession, getSession, putAnalyses, putErrorAnalysis, putQuestions, putSession, recordAttempt } from '../shared/storage/history';
 import { getSettings, isConfigured } from '../shared/storage/settings';
 import type { ErrorTag, ImageInput, Question, QuestionAnalysis, Settings } from '../shared/types';
 
@@ -16,6 +16,7 @@ const MAX_QUESTIONS = 20;
 
 async function requireSettings(): Promise<Settings> { const settings = await getSettings(); if (!isConfigured(settings)) throw appError('NO_API_KEY'); return settings; }
 function imageParts(images: ImageInput[], supportsVision: boolean): ChatPart[] { return supportsVision ? images.map((image) => ({ type: 'image' as const, mime: image.mime, dataBase64: image.dataBase64 })) : []; }
+function sumUsage(first?: ChatUsage, second?: ChatUsage): ChatUsage | undefined { if (!first && !second) return undefined; return { inputTokens: (first?.inputTokens ?? 0) + (second?.inputTokens ?? 0), outputTokens: (first?.outputTokens ?? 0) + (second?.outputTokens ?? 0), totalTokens: (first?.totalTokens ?? 0) + (second?.totalTokens ?? 0) }; }
 
 export async function runParse(input: RequestMap['PARSE_TEXT']['req'], signal: AbortSignal = new AbortController().signal): Promise<RequestMap['PARSE_TEXT']['res']> {
   const settings = await requireSettings();
@@ -24,14 +25,16 @@ export async function runParse(input: RequestMap['PARSE_TEXT']['req'], signal: A
   const visionSkipped = input.images.length > 0 && !settings.ai.supportsVision;
   const userParts: ChatPart[] = [{ type: 'text', text: input.rawText }, ...imageParts(input.images, settings.ai.supportsVision)];
 
-  const raw = await provider.complete({ system, userParts, json: true }, signal);
-  const result = await parseJsonWithRepair(raw, ParseResultSchema, (feedback) => provider.complete({ system, userParts: [...userParts, { type: 'text', text: feedback }], json: true }, signal));
+  const initial = await provider.complete({ system, userParts, json: true }, signal);
+  const result = await parseJsonWithRepairWithUsage(initial.text, ParseResultSchema, async (feedback) => provider.complete({ system, userParts: [...userParts, { type: 'text', text: feedback }], json: true }, signal));
+  void sumUsage(initial.usage, result.usage);
+  const parsed = result.value;
 
-  if (result.questions.length === 0) throw appError('PARSE_EMPTY');
-  if (result.questions.length > MAX_QUESTIONS) throw appError('TOO_MANY', { detail: `${result.questions.length} questions` });
+  if (parsed.questions.length === 0) throw appError('PARSE_EMPTY');
+  if (parsed.questions.length > MAX_QUESTIONS) throw appError('TOO_MANY', { detail: `${parsed.questions.length} questions` });
 
   const session = await createSession({ origin: input.origin, sourceUrl: input.sourceUrl, sourceTitle: input.sourceTitle, rawText: input.rawText, questionIds: [] });
-  const questions: Question[] = result.questions.map((question) => ({ id: crypto.randomUUID(), sessionId: session.id, order: question.order, stem: question.stem, passage: question.passage, choices: question.choices, imageIds: [], toeicPart: question.toeicPart as Question['toeicPart'] }));
+  const questions: Question[] = parsed.questions.map((question) => ({ id: crypto.randomUUID(), sessionId: session.id, order: question.order, stem: question.stem, passage: question.passage, choices: question.choices, imageIds: [], toeicPart: question.toeicPart as Question['toeicPart'] }));
 
   await putQuestions(questions);
   await putSession({ ...session, questionIds: questions.map((question) => question.id) });
@@ -41,6 +44,8 @@ export async function runParse(input: RequestMap['PARSE_TEXT']['req'], signal: A
 export async function runAnalyze(input: RequestMap['ANALYZE']['req'], signal: AbortSignal = new AbortController().signal): Promise<RequestMap['ANALYZE']['res']> {
   const settings = await requireSettings();
   const provider = createProvider(settings.ai);
+  const session = await getSession(input.sessionId);
+  if (!session) throw appError('UNKNOWN', { detail: 'session missing' });
 
   if (input.skippedQuestionIds.length > 0) await deleteQuestions(input.skippedQuestionIds);
   const kept = (await getQuestionsBySession(input.sessionId)).filter((question) => !input.skippedQuestionIds.includes(question.id));
@@ -52,14 +57,17 @@ export async function runAnalyze(input: RequestMap['ANALYZE']['req'], signal: Ab
   const { system, user } = buildAnalyzePrompt({ language: settings.explanationLanguage, questions: kept, answers });
   const userParts: ChatPart[] = [{ type: 'text', text: user }];
 
-  const raw = await provider.complete({ system, userParts, json: true }, signal);
-  const result = await parseJsonWithRepair(raw, AnalyzeResultSchema, (feedback) => provider.complete({ system, userParts: [...userParts, { type: 'text', text: feedback }], json: true }, signal));
+  const initial = await provider.complete({ system, userParts, json: true }, signal);
+  const result = await parseJsonWithRepairWithUsage(initial.text, AnalyzeResultSchema, async (feedback) => provider.complete({ system, userParts: [...userParts, { type: 'text', text: feedback }], json: true }, signal));
+  const usage = sumUsage(initial.usage, result.usage);
+  const parsed = result.value;
+  if (signal.aborted) throw appError('CANCELLED');
 
   const byOrder = new Map(kept.map((question) => [question.order, question]));
   const analyses: QuestionAnalysis[] = [];
   const attemptIdByQuestionId: Record<string, string> = {};
 
-  for (const rawAnalysis of result.analyses) {
+  for (const rawAnalysis of parsed.analyses) {
     const question = byOrder.get(rawAnalysis.order);
     if (!question) continue; // the model invented an order; drop it rather than mis-attributing
     analyses.push({ questionId: question.id, correctAnswer: rawAnalysis.correctAnswer, explanation: rawAnalysis.explanation, strategy: rawAnalysis.strategy, distractorNotes: rawAnalysis.distractorNotes, topic: rawAnalysis.topic, topicCategory: rawAnalysis.topicCategory });
@@ -68,7 +76,8 @@ export async function runAnalyze(input: RequestMap['ANALYZE']['req'], signal: Ab
   }
 
   await putAnalyses(analyses);
-  return { analyses, attemptIdByQuestionId };
+  await putSession({ ...session, analysisUsage: usage });
+  return { analyses, attemptIdByQuestionId, usage };
 }
 
 export async function* runErrorPsych(input: { questionId: string; attemptId: string; userTags: ErrorTag[]; userNote?: string }, signal: AbortSignal = new AbortController().signal): AsyncGenerator<ErrorPsychEvent> {
