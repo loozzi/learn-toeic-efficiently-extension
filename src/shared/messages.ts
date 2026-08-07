@@ -30,3 +30,6 @@ export function registerHandlers(handlers: Handlers): void {
 export const PORT_ERROR_PSYCH = 'errorPsych';
 export interface ErrorPsychRequest { questionId: string; attemptId: string; userTags: ErrorTag[]; userNote?: string; }
 export type ErrorPsychEvent = { type: 'delta'; text: string } | { type: 'done'; aiDiagnosis: string; fixAdvice: string } | { type: 'error'; error: SerializedError };
+
+export const PORT_WEAKNESS = 'weakness';
+export type WeaknessEvent = { type: 'delta'; text: string } | { type: 'done'; text: string } | { type: 'error'; error: SerializedError };

@@ -2,10 +2,12 @@ import { createProvider } from '../ai/index';
 import { buildAnalyzePrompt } from '../ai/prompts/analyze';
 import { FIX_MARKER, buildErrorPsychPrompt, splitDiagnosis } from '../ai/prompts/errorPsych';
 import { buildParsePrompt } from '../ai/prompts/parse';
+import { buildWeaknessPrompt } from '../ai/prompts/weakness';
 import { AnalyzeResultSchema, ParseResultSchema, parseJsonWithRepair } from '../ai/schema';
 import type { ChatPart } from '../ai/types';
 import { appError, serializeError } from '../shared/errors';
-import type { ErrorPsychEvent, RequestMap } from '../shared/messages';
+import type { ErrorPsychEvent, RequestMap, WeaknessEvent } from '../shared/messages';
+import type { Stats } from '../shared/storage/stats';
 import { answerForAttempt, createSession, deleteQuestions, findQuestion, getAnalysis, getQuestionsBySession, putAnalyses, putErrorAnalysis, putQuestions, putSession, recordAttempt } from '../shared/storage/history';
 import { getSettings, isConfigured } from '../shared/storage/settings';
 import type { ErrorTag, ImageInput, Question, QuestionAnalysis, Settings } from '../shared/types';
@@ -91,6 +93,24 @@ export async function* runErrorPsych(input: { questionId: string; attemptId: str
     const { aiDiagnosis, fixAdvice } = splitDiagnosis(full || FIX_MARKER);
     await putErrorAnalysis({ attemptId: input.attemptId, questionId: input.questionId, userTags: input.userTags, userNote: input.userNote, aiDiagnosis, fixAdvice });
     yield { type: 'done', aiDiagnosis, fixAdvice };
+  } catch (error) {
+    yield { type: 'error', error: serializeError(error) };
+  }
+}
+
+export async function* runWeaknessSummary(stats: Stats, signal: AbortSignal = new AbortController().signal): AsyncGenerator<WeaknessEvent> {
+  try {
+    const settings = await requireSettings();
+    const provider = createProvider(settings.ai);
+    const { system, user } = buildWeaknessPrompt({ language: settings.explanationLanguage, stats });
+
+    let full = '';
+    for await (const chunk of provider.stream({ system, userParts: [{ type: 'text', text: user }], json: false }, signal)) {
+      full += chunk.delta;
+      yield { type: 'delta', text: chunk.delta };
+    }
+
+    yield { type: 'done', text: full };
   } catch (error) {
     yield { type: 'error', error: serializeError(error) };
   }
