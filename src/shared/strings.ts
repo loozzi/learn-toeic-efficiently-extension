@@ -5,7 +5,7 @@ export const ERROR_TAG_ORDER: ErrorTag[] = ['no_grammar', 'no_structure', 'no_vo
 export const S = {
   appName: 'IMEN',
   onboarding: { title: 'Chưa sẵn sàng', body: 'Cần cấu hình AI provider trước khi dùng.', openSettings: 'Mở Cài đặt' },
-  paste: { tab: 'Dán đề', placeholder: 'Dán câu hỏi và các lựa chọn vào đây…', submit: 'Tách câu hỏi', parsing: 'Đang tách câu hỏi…', empty: 'Chưa có nội dung nào để tách.', imageCount: (count: number) => `Đã đính kèm ${count} ảnh` },
+  paste: { tab: 'Dán đề', placeholder: 'Dán câu hỏi và các lựa chọn vào đây…', submit: 'Tách câu hỏi', parsing: 'Đang tách câu hỏi…', empty: 'Chưa có nội dung nào để tách.', imageCount: (count: number) => `Đã đính kèm ${count} ảnh`, snip: 'Chụp vùng', sniping: 'Đang chờ khoanh vùng…' },
   review: { title: 'Bạn đã chọn đáp án nào?', hint: 'Chọn đúng đáp án bạn đã khoanh lúc làm bài. Chưa có đáp án đúng ở đây.', visionSkipped: 'Model hiện tại không nhận ảnh. Ảnh đã được bỏ qua.', notAttempted: 'Chưa làm', skip: 'Bỏ qua câu này', analyzeButton: 'Phân tích', analyzing: 'Đang phân tích…', counter: (done: number, total: number) => `Đã chọn ${done}/${total} câu` },
   result: { correct: 'Đúng', wrong: 'Sai', youChose: 'Bạn chọn', correctAnswer: 'Đáp án đúng', explanation: 'Giải thích', strategy: 'Mẹo nhận biết', distractors: 'Vì sao các đáp án khác sai', analyzeMistake: 'Phân tích lỗi sai', backToPaste: 'Phân tích cụm khác' },
   errorPanel: { title: 'Vì sao bạn chọn sai?', hint: 'Chọn một hoặc nhiều lý do, thêm ghi chú nếu muốn.', notePlaceholder: 'Ghi chú thêm (không bắt buộc)…', submit: 'Gửi', thinking: 'Đang phân tích…', diagnosis: 'Chẩn đoán', fixAdvice: 'Cách sửa' },

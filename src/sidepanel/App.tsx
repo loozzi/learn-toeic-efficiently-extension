@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { PORT_PANEL, type PanelEvent, type PendingCapture, sendRequest } from '../shared/messages';
 import { getSettings, isConfigured } from '../shared/storage/settings';
 import { S } from '../shared/strings';
-import type { Question, QuestionAnalysis } from '../shared/types';
+import type { ImageInput, Question, QuestionAnalysis } from '../shared/types';
 import { ErrorPanel } from './components/ErrorPanel';
 import { Onboarding } from './components/Onboarding';
 import { Paste } from './views/Paste';
@@ -17,8 +18,50 @@ export type PanelState =
 
 export function App() {
   const [state, setState] = useState<PanelState>({ view: 'loading' });
+  const [snipped, setSnipped] = useState<ImageInput[]>([]);
 
-  useEffect(() => { void getSettings().then((settings) => setState({ view: isConfigured(settings) ? 'paste' : 'onboarding' })); }, []);
+  const parseCapture = useCallback(async (capture: PendingCapture) => {
+    setState({ view: 'loading' });
+    const reply = await sendRequest('PARSE_TEXT', { rawText: capture.rawText, images: capture.images, origin: 'selection', sourceUrl: capture.sourceUrl, sourceTitle: capture.sourceTitle });
+    // A parse failure drops to the paste view rather than a dead end: the raw
+    // text is still in the clipboard and ErrorBanner covers the retry there.
+    setState(reply.ok ? { view: 'review', ...reply.data } : { view: 'paste' });
+  }, []);
+
+  const claim = useCallback(async () => {
+    const reply = await sendRequest('CLAIM_PENDING_CAPTURE', {});
+    if (reply.ok && reply.data.capture) {
+      await parseCapture(reply.data.capture);
+      return true;
+    }
+    return false;
+  }, [parseCapture]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      const settings = await getSettings();
+      if (cancelled) return;
+      if (!isConfigured(settings)) {
+        setState({ view: 'onboarding' });
+        return;
+      }
+      const claimed = await claim();
+      if (!cancelled && !claimed) setState({ view: 'paste' });
+    })();
+
+    const port = chrome.runtime.connect({ name: PORT_PANEL });
+    port.onMessage.addListener((event: PanelEvent) => {
+      if (event.type === 'pendingCapture') void claim();
+      if (event.type === 'snipImage') setSnipped((current) => [...current, event.image]);
+    });
+
+    return () => {
+      cancelled = true;
+      port.disconnect();
+    };
+  }, [claim]);
 
   function renderBody() {
     switch (state.view) {
@@ -27,7 +70,7 @@ export function App() {
       case 'onboarding':
         return <Onboarding />;
       case 'paste':
-        return <Paste onParsed={(payload) => setState({ view: 'review', ...payload })} />;
+        return <Paste snipped={snipped} onParsed={(payload) => setState({ view: 'review', ...payload })} />;
       case 'review':
         return <Review sessionId={state.sessionId} questions={state.questions} visionSkipped={state.visionSkipped} onAnalyzed={(payload) => setState({ view: 'result', ...payload })} />;
       case 'result':

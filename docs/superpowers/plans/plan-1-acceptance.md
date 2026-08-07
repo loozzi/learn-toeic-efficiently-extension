@@ -33,9 +33,8 @@ Fixture for item 4:
 (A) contact  (B) contacted  (C) contacting  (D) contacts
 ```
 
-## Known snag for the run
+## Known snag for the run — resolved
 
-`src/content/index.ts` is still the Task 1 spike: it injects an "IMEN spike"
-button into every page, and the background no longer handles its
-`SPIKE_OPEN_PANEL` message, so clicking it now fails. Harmless for the checks
-above — Plan 2 replaces that file entirely — but expect to see the button.
+The Task 1 spike button used to be injected into every page by
+`src/content/index.ts`. Plan 2 replaced that file with the real selection
+capture, so it is gone; ignore it if you see it in an older build of `dist/`.

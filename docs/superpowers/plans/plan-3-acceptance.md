@@ -31,9 +31,11 @@ Items 7, 10 and 11 must not be waved through.
 
 ## Notes for the run
 
-- **Item 5 needs Plan 2.** Nothing writes to the `images` store yet — image
-  capture is Plan 2's job — so `imageIds` is always empty and no image can
-  render. Treat item 5 as blocked, not failed, until Plan 2 ships.
+- **Item 5 needs a capture that carried an image.** Plan 2 now resolves images
+  and sends them to the model, but they travel as `ImageInput` on the parse
+  call — nothing yet writes a `Blob` to the `images` store or fills
+  `Question.imageIds`, so the detail view still has nothing to render. Treat
+  item 5 as blocked until that persistence gap is closed.
 - **Item 6, what "not visible" covers.** The retry hides the correct-answer
   line and the bolding of the correct choice, but the plan deliberately keeps
   the explanation text visible so it can be reread. Most explanations name the
