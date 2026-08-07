@@ -45,6 +45,19 @@ export async function createSession(input: Omit<Session, 'id' | 'createdAt'>): P
   return session;
 }
 
+/** Overwrites a whole session record — used to fill in questionIds after parsing. */
+export async function putSession(session: Session): Promise<void> {
+  await (await openDb()).put('sessions', session);
+}
+
+export async function findQuestion(id: string): Promise<Question | undefined> {
+  return (await openDb()).get('questions', id);
+}
+
+export async function answerForAttempt(attemptId: string): Promise<string | undefined> {
+  return (await (await openDb()).get('attempts', attemptId))?.userAnswer;
+}
+
 export async function putQuestions(questions: Question[]): Promise<void> {
   const transaction = (await openDb()).transaction('questions', 'readwrite');
   await Promise.all([...questions.map((question) => transaction.store.put(question)), transaction.done]);
