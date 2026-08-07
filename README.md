@@ -2,6 +2,8 @@
 
 Chrome extension for AI-assisted TOEIC practice.
 
+> Vietnamese version: [README.vi.md](README.vi.md)
+
 ## Installation
 
 Chrome 116 or newer is required (the sidePanel API).
