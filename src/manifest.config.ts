@@ -10,7 +10,7 @@ export default defineManifest({
   side_panel: { default_path: 'src/sidepanel/index.html' },
   options_page: 'src/app/index.html',
   content_scripts: [
-    { matches: ['<all_urls>'], js: ['src/content/index.ts'], run_at: 'document_idle' },
+    { matches: ['<all_urls>'], js: ['src/content/main.ts'], run_at: 'document_idle' },
   ],
   permissions: ['storage', 'sidePanel', 'activeTab', 'scripting', 'unlimitedStorage'],
   host_permissions: ['<all_urls>'],
