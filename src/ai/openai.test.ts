@@ -1,19 +1,159 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { HttpResponse, http } from 'msw';
-import { setupServer } from 'msw/node';
-import { createOpenAIProvider } from './openai';
-import { isAppError } from '../shared/errors';
-import type { ProviderConfig } from '../shared/types';
-const config: ProviderConfig = { provider: 'openai', apiKey: 'sk-test', model: 'gpt-test', supportsVision: true };
-let lastBody: any; let lastAuth: string | null;
-const server = setupServer(http.post('https://api.openai.com/v1/chat/completions', async ({ request }) => { lastBody = await request.json(); lastAuth = request.headers.get('authorization'); if (lastBody.stream) return new HttpResponse(['data: {"choices":[{"delta":{"content":"Hel"}}]}', 'data: {"choices":[{"delta":{"content":"lo"}}]}', 'data: [DONE]'].join('\n\n') + '\n\n', { headers: { 'Content-Type': 'text/event-stream' } }); return HttpResponse.json({ choices: [{ message: { content: '{"ok":true}' } }] }); }));
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' })); afterEach(() => server.resetHandlers()); afterAll(() => server.close());
-describe('openai adapter', () => {
-  it('sends the bearer token and model and returns message content with usage', async () => { server.use(http.post('https://api.openai.com/v1/chat/completions', async ({ request }) => { lastBody = await request.json(); lastAuth = request.headers.get('authorization'); return HttpResponse.json({ choices: [{ message: { content: '{"ok":true}' } }], usage: { prompt_tokens: 7, completion_tokens: 3, total_tokens: 10 } }); })); expect(await createOpenAIProvider(config).complete({ system: 'sys', userParts: [{ type: 'text', text: 'hi' }], json: true }, new AbortController().signal)).toEqual({ text: '{"ok":true}', usage: { inputTokens: 7, outputTokens: 3, totalTokens: 10 } }); expect(lastAuth).toBe('Bearer sk-test'); expect(lastBody.model).toBe('gpt-test'); expect(lastBody.response_format).toEqual({ type: 'json_object' }); expect(lastBody.messages[0]).toEqual({ role: 'system', content: 'sys' }); });
-  it('omits response_format when json is false', async () => { await createOpenAIProvider(config).complete({ system: 's', userParts: [{ type: 'text', text: 'hi' }], json: false }, new AbortController().signal); expect(lastBody.response_format).toBeUndefined(); });
-  it('encodes images as data-URI image_url parts', async () => { await createOpenAIProvider(config).complete({ system: 's', userParts: [{ type: 'text', text: 'look' }, { type: 'image', mime: 'image/jpeg', dataBase64: 'QUJD' }], json: false }, new AbortController().signal); expect(lastBody.messages[1].content).toEqual([{ type: 'text', text: 'look' }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,QUJD' } }]); });
-  it('streams deltas in order', async () => { const chunks: string[] = []; for await (const chunk of createOpenAIProvider(config).stream({ system: 's', userParts: [{ type: 'text', text: 'hi' }], json: false }, new AbortController().signal)) chunks.push(chunk.delta); expect(chunks.join('')).toBe('Hello'); });
-  it('honours a custom baseUrl', async () => { let hit = false; server.use(http.post('https://openrouter.test/api/v1/chat/completions', () => { hit = true; return HttpResponse.json({ choices: [{ message: { content: 'x' } }] }); })); await createOpenAIProvider({ ...config, baseUrl: 'https://openrouter.test/api/v1' }).complete({ system: 's', userParts: [], json: false }, new AbortController().signal); expect(hit).toBe(true); });
-  it.each([[401, 'AUTH'], [403, 'AUTH'], [429, 'RATE_LIMIT'], [500, 'UNKNOWN']])('maps HTTP %i to %s', async (status, code) => { server.use(http.post('https://api.openai.com/v1/chat/completions', () => HttpResponse.text('nope', { status }))); try { await createOpenAIProvider(config).complete({ system: 's', userParts: [], json: false }, new AbortController().signal); expect.unreachable('should throw'); } catch (error) { expect(isAppError(error) && error.code).toBe(code); } });
-  it('maps a network failure to NETWORK', async () => { server.use(http.post('https://api.openai.com/v1/chat/completions', () => HttpResponse.error())); try { await createOpenAIProvider(config).complete({ system: 's', userParts: [], json: false }, new AbortController().signal); expect.unreachable('should throw'); } catch (error) { expect(isAppError(error) && error.code).toBe('NETWORK'); } });
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { HttpResponse, http } from "msw";
+import { setupServer } from "msw/node";
+import { createOpenAIProvider } from "./openai";
+import { isAppError } from "../shared/errors";
+import type { ProviderConfig } from "../shared/types";
+const config: ProviderConfig = {
+  provider: "openai",
+  apiKey: "sk-test",
+  model: "gpt-test",
+  supportsVision: true,
+};
+let lastBody: any;
+let lastAuth: string | null;
+const server = setupServer(
+  http.post(
+    "https://api.openai.com/v1/chat/completions",
+    async ({ request }) => {
+      lastBody = await request.json();
+      lastAuth = request.headers.get("authorization");
+      if (lastBody.stream)
+        return new HttpResponse(
+          [
+            'data: {"choices":[{"delta":{"content":"Hel"}}]}',
+            'data: {"choices":[{"delta":{"content":"lo"}}]}',
+            "data: [DONE]",
+          ].join("\n\n") + "\n\n",
+          { headers: { "Content-Type": "text/event-stream" } },
+        );
+      return HttpResponse.json({
+        choices: [{ message: { content: '{"ok":true}' } }],
+      });
+    },
+  ),
+);
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+describe("openai adapter", () => {
+  it("sends the bearer token and model and returns message content with usage", async () => {
+    server.use(
+      http.post(
+        "https://api.openai.com/v1/chat/completions",
+        async ({ request }) => {
+          lastBody = await request.json();
+          lastAuth = request.headers.get("authorization");
+          return HttpResponse.json({
+            choices: [{ message: { content: '{"ok":true}' } }],
+            usage: { prompt_tokens: 7, completion_tokens: 3, total_tokens: 10 },
+          });
+        },
+      ),
+    );
+    expect(
+      await createOpenAIProvider(config).complete(
+        {
+          system: "sys",
+          userParts: [{ type: "text", text: "hi" }],
+          json: true,
+        },
+        new AbortController().signal,
+      ),
+    ).toEqual({
+      text: '{"ok":true}',
+      usage: { inputTokens: 7, outputTokens: 3, totalTokens: 10 },
+    });
+    expect(lastAuth).toBe("Bearer sk-test");
+    expect(lastBody.model).toBe("gpt-test");
+    expect(lastBody.response_format).toEqual({ type: "json_object" });
+    expect(lastBody.messages[0]).toEqual({ role: "system", content: "sys" });
+  });
+  it("omits response_format when json is false", async () => {
+    await createOpenAIProvider(config).complete(
+      { system: "s", userParts: [{ type: "text", text: "hi" }], json: false },
+      new AbortController().signal,
+    );
+    expect(lastBody.response_format).toBeUndefined();
+  });
+  it("encodes images as data-URI image_url parts", async () => {
+    await createOpenAIProvider(config).complete(
+      {
+        system: "s",
+        userParts: [
+          { type: "text", text: "look" },
+          { type: "image", mime: "image/jpeg", dataBase64: "QUJD" },
+        ],
+        json: false,
+      },
+      new AbortController().signal,
+    );
+    expect(lastBody.messages[1].content).toEqual([
+      { type: "text", text: "look" },
+      { type: "image_url", image_url: { url: "data:image/jpeg;base64,QUJD" } },
+    ]);
+  });
+  it("streams deltas in order", async () => {
+    const chunks: string[] = [];
+    for await (const chunk of createOpenAIProvider(config).stream(
+      { system: "s", userParts: [{ type: "text", text: "hi" }], json: false },
+      new AbortController().signal,
+    ))
+      chunks.push(chunk.delta);
+    expect(chunks.join("")).toBe("Hello");
+  });
+  it("honours a custom baseUrl", async () => {
+    let hit = false;
+    server.use(
+      http.post("https://openrouter.test/api/v1/chat/completions", () => {
+        hit = true;
+        return HttpResponse.json({ choices: [{ message: { content: "x" } }] });
+      }),
+    );
+    await createOpenAIProvider({
+      ...config,
+      baseUrl: "https://openrouter.test/api/v1",
+    }).complete(
+      { system: "s", userParts: [], json: false },
+      new AbortController().signal,
+    );
+    expect(hit).toBe(true);
+  });
+  it.each([
+    [401, "AUTH"],
+    [403, "AUTH"],
+    [429, "RATE_LIMIT"],
+    [500, "UNKNOWN"],
+  ])("maps HTTP %i to %s", async (status, code) => {
+    server.use(
+      http.post("https://api.openai.com/v1/chat/completions", () =>
+        HttpResponse.text("nope", { status }),
+      ),
+    );
+    try {
+      await createOpenAIProvider(config).complete(
+        { system: "s", userParts: [], json: false },
+        new AbortController().signal,
+      );
+      expect.unreachable("should throw");
+    } catch (error) {
+      expect(isAppError(error) && error.code).toBe(code);
+    }
+  });
+  it("maps a network failure to NETWORK", async () => {
+    server.use(
+      http.post("https://api.openai.com/v1/chat/completions", () =>
+        HttpResponse.error(),
+      ),
+    );
+    try {
+      await createOpenAIProvider(config).complete(
+        { system: "s", userParts: [], json: false },
+        new AbortController().signal,
+      );
+      expect.unreachable("should throw");
+    } catch (error) {
+      expect(isAppError(error) && error.code).toBe("NETWORK");
+    }
+  });
 });

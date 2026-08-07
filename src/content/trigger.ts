@@ -1,33 +1,36 @@
-import { S } from '../shared/strings';
-import type { TriggerAnchor } from './selection';
+import { S } from "../shared/strings";
+import type { TriggerAnchor } from "./selection";
 
 const GAP = 4;
 
-export interface ShadowHost { host: HTMLDivElement; shadow: ShadowRoot }
+export interface ShadowHost {
+  host: HTMLDivElement;
+  shadow: ShadowRoot;
+}
 
 export function getSurface(shadow: ShadowRoot): HTMLDivElement {
-  let surface = shadow.querySelector<HTMLDivElement>('[data-imen-surface]');
+  let surface = shadow.querySelector<HTMLDivElement>("[data-imen-surface]");
   if (surface) return surface;
 
-  surface = document.createElement('div');
-  surface.dataset.imenSurface = 'true';
+  surface = document.createElement("div");
+  surface.dataset.imenSurface = "true";
   shadow.appendChild(surface);
   return surface;
 }
 
 /** Plain DOM rather than React: this runs on every page load, and a React root per tab is weight the button does not need. */
 export function createShadowHost(): ShadowHost {
-  const host = document.createElement('div');
-  host.style.position = 'fixed';
-  host.style.top = '0';
-  host.style.left = '0';
-  host.style.width = '0';
-  host.style.height = '0';
-  host.style.zIndex = '2147483647';
-  host.setAttribute('data-imen', 'root');
+  const host = document.createElement("div");
+  host.style.position = "fixed";
+  host.style.top = "0";
+  host.style.left = "0";
+  host.style.width = "0";
+  host.style.height = "0";
+  host.style.zIndex = "2147483647";
+  host.setAttribute("data-imen", "root");
 
-  const shadow = host.attachShadow({ mode: 'closed' });
-  const style = document.createElement('style');
+  const shadow = host.attachShadow({ mode: "closed" });
+  const style = document.createElement("style");
   style.textContent = `
     :host { all: initial; }
     [data-imen-surface], [data-imen-surface] * { box-sizing: border-box; font-family: system-ui, sans-serif; }
@@ -59,16 +62,16 @@ export interface Trigger {
 
 export function mountTrigger(shadow: ShadowRoot, onClick: () => void): Trigger {
   const surface = getSurface(shadow);
-  const anchorElement = document.createElement('div');
-  anchorElement.className = 'anchor';
+  const anchorElement = document.createElement("div");
+  anchorElement.className = "anchor";
 
-  const button = document.createElement('button');
-  button.type = 'button';
+  const button = document.createElement("button");
+  button.type = "button";
   button.textContent = S.content.triggerLabel;
-  button.setAttribute('aria-label', S.content.triggerAria);
+  button.setAttribute("aria-label", S.content.triggerAria);
   // mousedown would clear the selection before the click handler reads it.
-  button.addEventListener('mousedown', (event) => event.preventDefault());
-  button.addEventListener('click', onClick);
+  button.addEventListener("mousedown", (event) => event.preventDefault());
+  button.addEventListener("click", onClick);
 
   function hide() {
     anchorElement.remove();
@@ -85,15 +88,19 @@ export function mountTrigger(shadow: ShadowRoot, onClick: () => void): Trigger {
     hide,
     destroy() {
       hide();
-      button.removeEventListener('click', onClick);
+      button.removeEventListener("click", onClick);
     },
   };
 }
 
-export function showToast(shadow: ShadowRoot, message: string, ms = 5000): void {
+export function showToast(
+  shadow: ShadowRoot,
+  message: string,
+  ms = 5000,
+): void {
   const surface = getSurface(shadow);
-  const toast = document.createElement('div');
-  toast.className = 'toast';
+  const toast = document.createElement("div");
+  toast.className = "toast";
   toast.textContent = message;
   surface.appendChild(toast);
   setTimeout(() => toast.remove(), ms);
