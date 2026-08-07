@@ -58,6 +58,12 @@ export async function answerForAttempt(attemptId: string): Promise<string | unde
   return (await (await openDb()).get('attempts', attemptId))?.userAnswer;
 }
 
+export async function getAllSessions(): Promise<Session[]> { return (await openDb()).getAll('sessions'); }
+export async function getAllQuestions(): Promise<Question[]> { return (await openDb()).getAll('questions'); }
+export async function getAllAnalyses(): Promise<QuestionAnalysis[]> { return (await openDb()).getAll('analyses'); }
+export async function getAllAttempts(): Promise<Attempt[]> { return (await openDb()).getAll('attempts'); }
+export async function getAllErrorAnalyses(): Promise<ErrorAnalysis[]> { return (await openDb()).getAll('errorAnalyses'); }
+
 export async function putQuestions(questions: Question[]): Promise<void> {
   const transaction = (await openDb()).transaction('questions', 'readwrite');
   await Promise.all([...questions.map((question) => transaction.store.put(question)), transaction.done]);
