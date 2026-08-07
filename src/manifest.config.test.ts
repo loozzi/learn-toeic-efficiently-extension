@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import manifest from './manifest.config';
+import defined from './manifest.config';
+
+// defineManifest widens to ManifestV3Export, a union that also allows a function
+// or a promise. This project always passes a plain object, so narrow once here.
+const manifest = defined as Extract<typeof defined, { manifest_version: unknown }>;
 
 describe('manifest', () => {
   it('targets MV3 on Chrome 116+', () => {
