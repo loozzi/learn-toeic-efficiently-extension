@@ -1,7 +1,21 @@
 import { type SerializedError, serializeError } from './errors';
 import type { AnswerSubmission, ErrorTag, ImageInput, ProviderConfig, Question, QuestionAnalysis } from './types';
+import type { ImageRef } from '../content/imageScan';
+import type { RectLike } from '../content/selection';
+
+/** A capture waiting for the side panel to claim it. */
+export interface PendingCapture {
+  rawText: string;
+  images: ImageInput[];
+  sourceUrl: string;
+  sourceTitle: string;
+}
 
 export interface RequestMap {
+  CAPTURE_SELECTION: { req: { rawText: string; imageRefs: ImageRef[]; bounds: RectLike | null; dpr: number; sourceUrl: string; sourceTitle: string }; res: { panelOpened: boolean } };
+  CLAIM_PENDING_CAPTURE: { req: Record<string, never>; res: { capture: PendingCapture | null } };
+  START_SNIP: { req: Record<string, never>; res: { started: boolean } };
+  SNIP_RESULT: { req: { bounds: RectLike; dpr: number }; res: { ok: boolean } };
   PARSE_TEXT: { req: { rawText: string; images: ImageInput[]; origin: 'paste' | 'selection'; sourceUrl?: string; sourceTitle?: string }; res: { sessionId: string; questions: Question[]; visionSkipped: boolean } };
   ANALYZE: { req: { sessionId: string; answers: AnswerSubmission[]; skippedQuestionIds: string[] }; res: { analyses: QuestionAnalysis[]; attemptIdByQuestionId: Record<string, string> } };
   TEST_CONNECTION: { req: { config: ProviderConfig }; res: { ok: boolean; message: string } };
@@ -33,3 +47,11 @@ export type ErrorPsychEvent = { type: 'delta'; text: string } | { type: 'done'; 
 
 export const PORT_WEAKNESS = 'weakness';
 export type WeaknessEvent = { type: 'delta'; text: string } | { type: 'done'; text: string } | { type: 'error'; error: SerializedError };
+
+/** The panel's long-lived port: how the worker reaches a panel that is already open. */
+export const PORT_PANEL = 'panel';
+export type PanelEvent = { type: 'pendingCapture' } | { type: 'snipImage'; image: ImageInput } | { type: 'snipFailed' };
+
+/** Sent to the content script with chrome.tabs.sendMessage — it travels the other way, so it is not in RequestMap. */
+export const CONTENT_COMMAND = 'imen:content-command';
+export type ContentCommand = { type: 'startSnip' } | { type: 'toast'; message: string };
