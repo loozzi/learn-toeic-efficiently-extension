@@ -1,4 +1,4 @@
-export type Provider = "openai" | "gemini";
+export type Provider = "openai" | "gemini" | "ollama";
 export type ExplanationLanguage = "vi" | "en" | "bilingual";
 
 export interface TokenUsage {

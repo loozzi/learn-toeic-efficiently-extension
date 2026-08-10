@@ -29,5 +29,6 @@ export async function saveSettings(patch: Partial<Settings>): Promise<Settings> 
 }
 
 export function isConfigured(settings: Settings): boolean {
-  return settings.ai.apiKey.trim().length > 0 && settings.ai.model.trim().length > 0;
+  if (settings.ai.model.trim().length === 0) return false;
+  return settings.ai.provider === 'ollama' || settings.ai.apiKey.trim().length > 0;
 }

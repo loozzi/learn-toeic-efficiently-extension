@@ -129,6 +129,7 @@ export const S = {
     apiKey: "API key",
     apiKeyWarning:
       "API key được lưu không mã hoá trong bộ nhớ của Chrome. Ai truy cập được profile Chrome của bạn đều đọc được nó.",
+    apiKeyOptional: "Không bắt buộc với Ollama",
     model: "Model",
     supportsVision: "Model này nhận được ảnh",
     explanationLanguage: "Ngôn ngữ giải thích",

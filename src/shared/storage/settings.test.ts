@@ -28,6 +28,10 @@ describe('settings storage', () => {
     expect(isConfigured({ ...DEFAULT_SETTINGS, ai: { ...DEFAULT_SETTINGS.ai, apiKey: 'k' } })).toBe(false);
     expect(isConfigured({ ...DEFAULT_SETTINGS, ai: { ...DEFAULT_SETTINGS.ai, apiKey: 'k', model: 'm' } })).toBe(true);
   });
+  it('treats ollama as configured with just a model, no apiKey required', () => {
+    expect(isConfigured({ ...DEFAULT_SETTINGS, ai: { ...DEFAULT_SETTINGS.ai, provider: 'ollama', model: 'llama3' } })).toBe(true);
+    expect(isConfigured({ ...DEFAULT_SETTINGS, ai: { ...DEFAULT_SETTINGS.ai, provider: 'ollama' } })).toBe(false);
+  });
   it('ignores a blank baseUrl rather than storing an empty string', async () => {
     await saveSettings({ ai: { ...DEFAULT_SETTINGS.ai, baseUrl: '   ' } });
     expect((await getSettings()).ai.baseUrl).toBeUndefined();

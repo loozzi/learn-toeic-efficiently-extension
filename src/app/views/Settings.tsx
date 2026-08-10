@@ -37,7 +37,7 @@ export function Settings() {
 
   useEffect(() => { void getSettings().then(setDraft); }, []);
 
-  const missingKey = draft.ai.apiKey.trim() === '';
+  const missingKey = draft.ai.provider !== 'ollama' && draft.ai.apiKey.trim() === '';
   const missingModel = draft.ai.model.trim() === '';
 
   function patchAi(patch: Partial<SettingsType['ai']>) { setSaved(false); setDraft((current) => ({ ...current, ai: { ...current.ai, ...patch } })); }
@@ -97,23 +97,26 @@ export function Settings() {
           <select id="provider" className={inputClass} value={draft.ai.provider} onChange={(event) => patchAi({ provider: event.target.value as Provider })}>
             <option value="openai">OpenAI</option>
             <option value="gemini">Gemini</option>
+            <option value="ollama">Ollama</option>
           </select>
         </div>
 
         <div>
           {fieldLabel('baseUrl', S.settings.baseUrl)}
-          <input id="baseUrl" className={inputClass} value={draft.ai.baseUrl ?? ''} onChange={(event) => patchAi({ baseUrl: event.target.value })} />
+          <input id="baseUrl" className={inputClass} placeholder={draft.ai.provider === 'ollama' ? 'http://localhost:11434/v1' : undefined} value={draft.ai.baseUrl ?? ''} onChange={(event) => patchAi({ baseUrl: event.target.value })} />
           <span className="mt-1 block text-xs text-muted-foreground">{S.settings.baseUrlHint}</span>
         </div>
 
         <div>
           {fieldLabel('apiKey', S.settings.apiKey)}
-          <input id="apiKey" type="password" className={inputClass} value={draft.ai.apiKey} onChange={(event) => patchAi({ apiKey: event.target.value })} />
+          <input id="apiKey" type="password" className={inputClass} placeholder={draft.ai.provider === 'ollama' ? S.settings.apiKeyOptional : undefined} value={draft.ai.apiKey} onChange={(event) => patchAi({ apiKey: event.target.value })} />
           {touched && missingKey && <span className="mt-1 block text-xs text-destructive">{S.settings.required}</span>}
-          <span className="mt-2 flex items-start gap-1.5 rounded-lg border border-warning-border bg-warning-bg p-2 text-xs text-warning">
-            <AlertTriangle size={13} strokeWidth={2} className="mt-0.5 shrink-0" />
-            {S.settings.apiKeyWarning}
-          </span>
+          {draft.ai.provider !== 'ollama' && (
+            <span className="mt-2 flex items-start gap-1.5 rounded-lg border border-warning-border bg-warning-bg p-2 text-xs text-warning">
+              <AlertTriangle size={13} strokeWidth={2} className="mt-0.5 shrink-0" />
+              {S.settings.apiKeyWarning}
+            </span>
+          )}
         </div>
 
         <div>
