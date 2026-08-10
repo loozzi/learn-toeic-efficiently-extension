@@ -26,6 +26,8 @@ export const S = {
     imageCount: (count: number) => `Đã đính kèm ${count} ảnh`,
     snip: "Chụp vùng",
     sniping: "Đang chờ khoanh vùng…",
+    snipStartFailed:
+      "Không mở được chế độ chụp vùng trên trang này. Hãy tải lại trang rồi thử lại.",
   },
   review: {
     title: "Bạn đã chọn đáp án nào?",

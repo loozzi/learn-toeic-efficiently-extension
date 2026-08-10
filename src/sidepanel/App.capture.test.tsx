@@ -47,4 +47,14 @@ describe('side panel capture handoff', () => {
 
     await waitFor(() => expect(sendRequest).toHaveBeenCalledWith('PARSE_TEXT', expect.objectContaining({ rawText: 'later' })));
   });
+
+  it('surfaces a snipFailed panel event in the paste view', async () => {
+    sendRequest.mockResolvedValue({ ok: true, data: { capture: null } });
+    render(<App />);
+    await screen.findByPlaceholderText(S.paste.placeholder);
+
+    emit({ type: 'snipFailed' });
+
+    expect(await screen.findByText(S.content.snipFailed)).toBeInTheDocument();
+  });
 });

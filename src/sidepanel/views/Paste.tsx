@@ -1,5 +1,5 @@
 import { ArrowRight, Crop, ImageIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SerializedError } from '../../shared/errors';
 import { sendRequest } from '../../shared/messages';
 import { Button } from '../../shared/components/Button';
@@ -16,15 +16,22 @@ async function fileToImageInput(file: File): Promise<ImageInput> {
   return { mime: file.type || 'image/png', dataBase64: btoa(binary) };
 }
 
-export function Paste({ onParsed, snipped = [] }: { onParsed: (payload: ParsedPayload) => void; snipped?: ImageInput[] }) {
+export function Paste({ onParsed, snipped = [], snipFailed = 0 }: { onParsed: (payload: ParsedPayload) => void; snipped?: ImageInput[]; snipFailed?: number }) {
   const [text, setText] = useState('');
   const [images, setImages] = useState<ImageInput[]>([]);
   const [busy, setBusy] = useState(false);
   const [sniping, setSniping] = useState(false);
   const [empty, setEmpty] = useState(false);
   const [error, setError] = useState<SerializedError | null>(null);
+  const [snipIssue, setSnipIssue] = useState<'start' | 'capture' | null>(null);
 
   const allImages = [...images, ...snipped];
+
+  // The panel pushes this event once the region the user dragged failed to
+  // capture; surface it the same way a failed START_SNIP is surfaced below.
+  useEffect(() => {
+    if (snipFailed > 0) setSnipIssue('capture');
+  }, [snipFailed]);
 
   async function submit() {
     setError(null);
@@ -37,9 +44,11 @@ export function Paste({ onParsed, snipped = [] }: { onParsed: (payload: ParsedPa
   }
 
   async function snip() {
+    setSnipIssue(null);
     setSniping(true);
-    await sendRequest('START_SNIP', {});
+    const reply = await sendRequest('START_SNIP', {});
     setSniping(false);
+    if (!reply.ok || !reply.data.started) setSnipIssue('start');
   }
 
   async function onPaste(event: React.ClipboardEvent<HTMLTextAreaElement>) {
@@ -66,6 +75,8 @@ export function Paste({ onParsed, snipped = [] }: { onParsed: (payload: ParsedPa
       )}
 
       {empty && <p className="text-sm text-destructive">{S.paste.empty}</p>}
+      {snipIssue === 'start' && <p className="text-sm text-destructive">{S.paste.snipStartFailed}</p>}
+      {snipIssue === 'capture' && <p className="text-sm text-destructive">{S.content.snipFailed}</p>}
       {error && <ErrorBanner error={error} onRetry={() => void submit()} />}
 
       <div className="flex items-center gap-2">

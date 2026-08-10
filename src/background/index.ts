@@ -39,10 +39,22 @@ registerHandlers({
       active: true,
       lastFocusedWindow: true,
     });
-    if (tab?.id == null) return { started: false };
-    await chrome.tabs.sendMessage(tab.id, {
-      [CONTENT_COMMAND]: { type: "startSnip" },
-    });
+    if (tab?.id == null) {
+      console.error("[imen] START_SNIP: no active tab found");
+      return { started: false };
+    }
+    try {
+      await chrome.tabs.sendMessage(tab.id, {
+        [CONTENT_COMMAND]: { type: "startSnip" },
+      });
+    } catch (error) {
+      console.error(
+        "[imen] START_SNIP: could not reach content script on",
+        tab.url,
+        error,
+      );
+      throw error;
+    }
     return { started: true };
   },
 

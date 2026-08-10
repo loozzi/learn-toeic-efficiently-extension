@@ -86,6 +86,7 @@ function Steps({ current }: { current: (typeof STEP_ORDER)[number] }) {
 export function App() {
   const [state, setState] = useState<PanelState>({ view: "loading" });
   const [snipped, setSnipped] = useState<ImageInput[]>([]);
+  const [snipFailed, setSnipFailed] = useState(0);
 
   const parseCapture = useCallback(async (capture: PendingCapture) => {
     setState({ view: "loading" });
@@ -129,6 +130,8 @@ export function App() {
       if (event.type === "pendingCapture") void claim();
       if (event.type === "snipImage")
         setSnipped((current) => [...current, event.image]);
+      if (event.type === "snipFailed")
+        setSnipFailed((current) => current + 1);
     });
 
     return () => {
@@ -151,6 +154,7 @@ export function App() {
         return (
           <Paste
             snipped={snipped}
+            snipFailed={snipFailed}
             onParsed={(payload) => setState({ view: "review", ...payload })}
           />
         );

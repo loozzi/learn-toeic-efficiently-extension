@@ -27,6 +27,26 @@ describe('Paste view', () => {
     expect(await screen.findByRole('button', { name: S.common.retry })).toBeInTheDocument();
   });
 
+  it('shows a message when START_SNIP fails to reach the content script', async () => {
+    sendRequest.mockResolvedValue({ ok: false, error: { code: 'UNKNOWN', detail: 'Could not establish connection' } });
+    render(<Paste onParsed={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: S.paste.snip }));
+    expect(await screen.findByText(S.paste.snipStartFailed)).toBeInTheDocument();
+  });
+
+  it('shows a message when START_SNIP finds no active tab', async () => {
+    sendRequest.mockResolvedValue({ ok: true, data: { started: false } });
+    render(<Paste onParsed={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: S.paste.snip }));
+    expect(await screen.findByText(S.paste.snipStartFailed)).toBeInTheDocument();
+  });
+
+  it('surfaces a snipFailed panel event as a capture-failed message', async () => {
+    const { rerender } = render(<Paste onParsed={vi.fn()} snipFailed={0} />);
+    rerender(<Paste onParsed={vi.fn()} snipFailed={1} />);
+    expect(await screen.findByText(S.content.snipFailed)).toBeInTheDocument();
+  });
+
   // jsdom has no DataTransfer, so the clipboard payload is handed to React's
   // synthetic paste event directly rather than through a real ClipboardEvent.
   it('attaches images pasted from the clipboard', async () => {
