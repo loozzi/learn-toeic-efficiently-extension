@@ -1,6 +1,6 @@
 import { CheckCircle2, HelpCircle, Lightbulb, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { SerializedError } from "../../shared/errors";
+import { type SerializedError, serializeError } from "../../shared/errors";
 import { sendRequest } from "../../shared/messages";
 import { Button } from "../../shared/components/Button";
 import { ChoiceButton } from "../../shared/components/ChoiceButton";
@@ -66,17 +66,26 @@ export function Review({
   async function askHint(questionId: string) {
     setHintLoading((current) => ({ ...current, [questionId]: true }));
     setHintErrors((current) => ({ ...current, [questionId]: undefined }));
-    const reply = await sendRequest("HINT", {
-      questionId,
-      previousHints: hints[questionId] ?? [],
-    });
-    if (reply.ok)
-      setHints((current) => ({
+    try {
+      const reply = await sendRequest("HINT", {
+        questionId,
+        previousHints: hints[questionId] ?? [],
+      });
+      if (reply.ok)
+        setHints((current) => ({
+          ...current,
+          [questionId]: [...(current[questionId] ?? []), reply.data.hint],
+        }));
+      else
+        setHintErrors((current) => ({ ...current, [questionId]: reply.error }));
+    } catch (error) {
+      setHintErrors((current) => ({
         ...current,
-        [questionId]: [...(current[questionId] ?? []), reply.data.hint],
+        [questionId]: serializeError(error),
       }));
-    else setHintErrors((current) => ({ ...current, [questionId]: reply.error }));
-    setHintLoading((current) => ({ ...current, [questionId]: false }));
+    } finally {
+      setHintLoading((current) => ({ ...current, [questionId]: false }));
+    }
   }
 
   async function analyze() {

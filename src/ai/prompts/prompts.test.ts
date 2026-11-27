@@ -25,4 +25,9 @@ describe('prompts', () => {
     expect(user).toContain('The manager ___ the report.');
     expect(system.toLowerCase()).toMatch(/more specific/);
   });
+  it('forbids hints from echoing choice text and caps escalation short of the answer', () => {
+    const { system } = buildHintPrompt({ language: 'vi', question, previousHints: ['a', 'b', 'c'] });
+    expect(system.toLowerCase()).toMatch(/never quote.*text of any choice/s);
+    expect(system.toLowerCase()).toMatch(/cannot be more specific without giving the answer away/);
+  });
 });

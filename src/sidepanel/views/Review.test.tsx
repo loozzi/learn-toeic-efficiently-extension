@@ -188,4 +188,13 @@ describe("Review hints", () => {
     expect(await card.findByRole("alert")).toBeInTheDocument();
     expect(card.getByRole("button", { name: S.review.dontKnow })).toBeEnabled();
   });
+
+  it("re-enables the hint button when the request itself throws", async () => {
+    sendRequest.mockRejectedValueOnce(new Error("Extension context invalidated."));
+    renderReview();
+    const card = within(screen.getByTestId("question-q1"));
+    await userEvent.click(card.getByRole("button", { name: S.review.dontKnow }));
+    expect(await card.findByRole("alert")).toBeInTheDocument();
+    expect(card.getByRole("button", { name: S.review.dontKnow })).toBeEnabled();
+  });
 });
