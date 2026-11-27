@@ -50,8 +50,8 @@ The user picked approach 1.
   reveal or confirm the answer. Plain text, not JSON. Uses `languageInstruction`
   so it follows the explanation-language setting.
 - **Message** `HINT` in `src/shared/messages.ts`: req `{ requestId, questionId, previousHints: string[] }`,
-  res `{ hint: string }`. Plus `CANCEL_HINT` (or reuse the existing cancel pattern)
-  so unmounting Review aborts in-flight hints.
+  res `{ hint: string }`, registered through `registerHandlers`. No cancel channel:
+  a late reply to an unmounted Review is simply dropped (builder's call — hints are cheap).
 - **Background** `runHint` in `src/background/aiRunner.ts`: loads the question via
   `findQuestion`, calls `provider.complete` (no streaming, `json: false`), returns
   trimmed text. Errors go through the existing `appError` / `ErrorBanner` path.
