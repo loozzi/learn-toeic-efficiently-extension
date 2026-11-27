@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { S } from "../../shared/strings";
@@ -159,5 +159,33 @@ describe("Review view", () => {
     await act(async () => {
       resolveAnalyze?.({ ok: false, error: { code: "CANCELLED" } });
     });
+  });
+});
+
+describe("Review hints", () => {
+  beforeEach(() => sendRequest.mockReset());
+
+  it("shows a hint under the question and sends earlier hints on the next click", async () => {
+    sendRequest
+      .mockResolvedValueOnce({ ok: true, data: { hint: "Nhìn chủ ngữ." } })
+      .mockResolvedValueOnce({ ok: true, data: { hint: "Chủ ngữ số ít thì động từ thế nào?" } });
+    renderReview();
+    const card = within(screen.getByTestId("question-q1"));
+    await userEvent.click(card.getByRole("button", { name: S.review.dontKnow }));
+    expect(await card.findByText("Nhìn chủ ngữ.")).toBeInTheDocument();
+    await userEvent.click(card.getByRole("button", { name: S.review.dontKnow }));
+    expect(await card.findByText("Chủ ngữ số ít thì động từ thế nào?")).toBeInTheDocument();
+    expect(card.getByText("Nhìn chủ ngữ.")).toBeInTheDocument();
+    expect(sendRequest).toHaveBeenLastCalledWith("HINT", { questionId: "q1", previousHints: ["Nhìn chủ ngữ."] });
+    expect(within(screen.getByTestId("question-q2")).queryByText("Nhìn chủ ngữ.")).not.toBeInTheDocument();
+  });
+
+  it("shows a hint error inline and lets the learner retry", async () => {
+    sendRequest.mockResolvedValueOnce({ ok: false, error: { code: "NO_API_KEY" } });
+    renderReview();
+    const card = within(screen.getByTestId("question-q1"));
+    await userEvent.click(card.getByRole("button", { name: S.review.dontKnow }));
+    expect(await card.findByRole("alert")).toBeInTheDocument();
+    expect(card.getByRole("button", { name: S.review.dontKnow })).toBeEnabled();
   });
 });

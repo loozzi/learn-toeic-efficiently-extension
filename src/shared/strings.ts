@@ -38,6 +38,9 @@ export const S = {
     analyzeButton: "Phân tích",
     analyzing: "Đang phân tích…",
     counter: (done: number, total: number) => `Đã chọn ${done}/${total} câu`,
+    dontKnow: "Chưa biết",
+    hintLoading: "Đang nghĩ gợi ý…",
+    hintLabel: (n: number) => `Gợi ý ${n}`,
   },
   result: {
     correct: "Đúng",
