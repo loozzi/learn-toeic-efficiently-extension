@@ -1,6 +1,6 @@
-import { CheckCircle2, X } from "lucide-react";
+import { CheckCircle2, HelpCircle, Lightbulb, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { SerializedError } from "../../shared/errors";
+import { type SerializedError, serializeError } from "../../shared/errors";
 import { sendRequest } from "../../shared/messages";
 import { Button } from "../../shared/components/Button";
 import { ChoiceButton } from "../../shared/components/ChoiceButton";
@@ -37,6 +37,11 @@ export function Review({
   const [skipped, setSkipped] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<SerializedError | null>(null);
+  const [hints, setHints] = useState<Record<string, string[]>>({});
+  const [hintLoading, setHintLoading] = useState<Record<string, boolean>>({});
+  const [hintErrors, setHintErrors] = useState<
+    Record<string, SerializedError | undefined>
+  >({});
   const requestIdRef = useRef<string | null>(null);
   const cancelRequestedRef = useRef(false);
 
@@ -56,6 +61,31 @@ export function Review({
       ...current,
       [questionId]: current[questionId] === label ? undefined : label,
     }));
+  }
+
+  async function askHint(questionId: string) {
+    setHintLoading((current) => ({ ...current, [questionId]: true }));
+    setHintErrors((current) => ({ ...current, [questionId]: undefined }));
+    try {
+      const reply = await sendRequest("HINT", {
+        questionId,
+        previousHints: hints[questionId] ?? [],
+      });
+      if (reply.ok)
+        setHints((current) => ({
+          ...current,
+          [questionId]: [...(current[questionId] ?? []), reply.data.hint],
+        }));
+      else
+        setHintErrors((current) => ({ ...current, [questionId]: reply.error }));
+    } catch (error) {
+      setHintErrors((current) => ({
+        ...current,
+        [questionId]: serializeError(error),
+      }));
+    } finally {
+      setHintLoading((current) => ({ ...current, [questionId]: false }));
+    }
   }
 
   async function analyze() {
@@ -139,6 +169,17 @@ export function Review({
                     onClick={() => pick(question.id, choice.label)}
                   />
                 ))}
+                <button
+                  type="button"
+                  disabled={hintLoading[question.id]}
+                  onClick={() => void askHint(question.id)}
+                  className="inline-flex h-9 items-center gap-1 rounded-lg border border-dashed border-border bg-surface px-3 text-sm text-muted-foreground transition-colors duration-150 hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <HelpCircle size={14} strokeWidth={2} />
+                  {hintLoading[question.id]
+                    ? S.review.hintLoading
+                    : S.review.dontKnow}
+                </button>
                 {!answered && (
                   <span className="self-center text-xs text-muted-foreground">
                     {S.review.notAttempted}
@@ -153,6 +194,35 @@ export function Review({
                   </div>
                 ))}
               </div>
+
+              {(hints[question.id]?.length ?? 0) > 0 && (
+                <ul className="space-y-1.5">
+                  {hints[question.id].map((hint, index) => (
+                    <li
+                      key={index}
+                      className="flex items-start gap-1.5 rounded-lg border border-warning-border bg-warning-bg p-2 text-sm text-foreground"
+                    >
+                      <Lightbulb
+                        size={15}
+                        strokeWidth={2}
+                        className="mt-0.5 shrink-0 text-warning"
+                      />
+                      <span>
+                        <span className="font-medium">
+                          {S.review.hintLabel(index + 1)}:
+                        </span>{" "}
+                        <span>{hint}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {hintErrors[question.id] && (
+                <ErrorBanner
+                  error={hintErrors[question.id]!}
+                  onRetry={() => void askHint(question.id)}
+                />
+              )}
 
               <button
                 type="button"

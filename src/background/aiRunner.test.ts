@@ -13,7 +13,7 @@ const stream = vi.fn();
 vi.mock("../ai/index", () => ({
   createProvider: () => ({ complete, stream }),
 }));
-const { runAnalyze, runErrorPsych, runParse } = await import("./aiRunner");
+const { runAnalyze, runErrorPsych, runHint, runParse } = await import("./aiRunner");
 const mock = installChromeMock();
 beforeEach(async () => {
   mock.reset();
@@ -198,5 +198,27 @@ describe("configuration guard", () => {
     await expect(
       runParse({ rawText: "raw", images: [], origin: "paste" }),
     ).rejects.toMatchObject({ code: "NO_API_KEY" });
+  });
+});
+
+describe("runHint", () => {
+  it("returns the trimmed hint and passes previous hints to the model", async () => {
+    complete.mockResolvedValueOnce({ text: parseReply });
+    const { questions } = await runParse({ rawText: "raw", images: [], origin: "paste" });
+    complete.mockResolvedValueOnce({ text: "  Sau chủ ngữ số ít cần gì?\n" });
+    const out = await runHint({ questionId: questions[0].id, previousHints: ["Nhìn chủ ngữ."] });
+    expect(out).toEqual({ hint: "Sau chủ ngữ số ít cần gì?" });
+    const request = complete.mock.calls[1][0];
+    expect(request.json).toBe(false);
+    expect(request.userParts[0].text).toContain("Nhìn chủ ngữ.");
+  });
+  it("rejects an empty hint instead of showing a blank one", async () => {
+    complete.mockResolvedValueOnce({ text: parseReply });
+    const { questions } = await runParse({ rawText: "raw", images: [], origin: "paste" });
+    complete.mockResolvedValueOnce({ text: "   " });
+    await expect(runHint({ questionId: questions[0].id, previousHints: [] })).rejects.toMatchObject({ code: "UNKNOWN" });
+  });
+  it("rejects an unknown question", async () => {
+    await expect(runHint({ questionId: "nope", previousHints: [] })).rejects.toMatchObject({ code: "UNKNOWN" });
   });
 });

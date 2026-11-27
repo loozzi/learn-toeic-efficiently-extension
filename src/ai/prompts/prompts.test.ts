@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildParsePrompt } from './parse';
 import { buildAnalyzePrompt } from './analyze';
 import { FIX_MARKER, buildErrorPsychPrompt, splitDiagnosis } from './errorPsych';
+import { buildHintPrompt } from './hint';
 
 const question = { id: 'q1', sessionId: 's', order: 1, stem: 'The manager ___ the report.', choices: [{ label: 'A', text: 'submit' }, { label: 'B', text: 'submits' }], imageIds: [] };
 describe('prompts', () => {
@@ -13,4 +14,20 @@ describe('prompts', () => {
   it('asks the error-psychology step for two sections split by a marker', () => { expect(buildErrorPsychPrompt({ language: 'vi', question, correctAnswer: 'B', userAnswer: 'A', userTags: ['no_grammar'], userNote: 'nhìn nhầm' }).system).toContain(FIX_MARKER); });
   it('splits a streamed diagnosis on the marker', () => { expect(splitDiagnosis(`why you erred${FIX_MARKER}how to fix`)).toEqual({ aiDiagnosis: 'why you erred', fixAdvice: 'how to fix' }); });
   it('puts the whole text in the diagnosis when the marker is missing', () => { expect(splitDiagnosis('only prose')).toEqual({ aiDiagnosis: 'only prose', fixAdvice: '' }); });
+  it('forbids the hint step from revealing the answer', () => {
+    const { system } = buildHintPrompt({ language: 'vi', question, previousHints: [] });
+    expect(system.toLowerCase()).toMatch(/never.*(reveal|state|name).*(answer|letter)/s);
+    expect(system).toMatch(/Vietnamese/);
+  });
+  it('sends previous hints so the next one escalates', () => {
+    const { system, user } = buildHintPrompt({ language: 'en', question, previousHints: ['Look at the subject.'] });
+    expect(user).toContain('Look at the subject.');
+    expect(user).toContain('The manager ___ the report.');
+    expect(system.toLowerCase()).toMatch(/more specific/);
+  });
+  it('forbids hints from echoing choice text and caps escalation short of the answer', () => {
+    const { system } = buildHintPrompt({ language: 'vi', question, previousHints: ['a', 'b', 'c'] });
+    expect(system.toLowerCase()).toMatch(/never quote.*text of any choice/s);
+    expect(system.toLowerCase()).toMatch(/cannot be more specific without giving the answer away/);
+  });
 });

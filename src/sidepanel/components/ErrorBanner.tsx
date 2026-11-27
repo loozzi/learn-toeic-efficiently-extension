@@ -6,7 +6,7 @@ import { S } from '../../shared/strings';
 export function ErrorBanner({ error, onRetry }: { error: SerializedError; onRetry?: () => void }) {
   const appError = deserializeError(error);
   return (
-    <div className="space-y-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm">
+    <div role="alert" className="space-y-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm">
       <div className="flex items-start gap-2">
         <AlertTriangle size={16} strokeWidth={2} className="mt-0.5 shrink-0 text-destructive" />
         <p className="text-destructive">{errorMessage(appError)}</p>

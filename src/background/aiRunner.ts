@@ -5,6 +5,7 @@ import {
   buildErrorPsychPrompt,
   splitDiagnosis,
 } from "../ai/prompts/errorPsych";
+import { buildHintPrompt } from "../ai/prompts/hint";
 import { buildParsePrompt } from "../ai/prompts/parse";
 import { buildWeaknessPrompt } from "../ai/prompts/weakness";
 import {
@@ -292,6 +293,32 @@ export async function* runWeaknessSummary(
   } catch (error) {
     yield { type: "error", error: serializeError(error) };
   }
+}
+
+export async function runHint(
+  input: RequestMap["HINT"]["req"],
+  signal: AbortSignal = new AbortController().signal,
+): Promise<RequestMap["HINT"]["res"]> {
+  const settings = await requireSettings();
+  const provider = createProvider(settings.ai);
+  const question = await findQuestion(input.questionId);
+  if (!question) throw appError("UNKNOWN", { detail: "question missing" });
+
+  const { system, user } = buildHintPrompt({
+    language: settings.explanationLanguage,
+    question,
+    previousHints: input.previousHints,
+  });
+  const reply = await provider.complete(
+    { system, userParts: [{ type: "text", text: user }], json: false },
+    signal,
+  );
+  const hint = reply.text
+    .trim()
+    .replace(/^["“](.*)["”]$/s, "$1")
+    .trim();
+  if (!hint) throw appError("UNKNOWN", { detail: "empty hint" });
+  return { hint };
 }
 
 export async function runTestConnection(
