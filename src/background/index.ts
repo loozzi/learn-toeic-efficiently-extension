@@ -8,6 +8,7 @@ import {
 import {
   runAnalyze,
   runErrorPsych,
+  runHint,
   runParse,
   runTestConnection,
   runWeaknessSummary,
@@ -24,6 +25,7 @@ chrome.sidePanel
 
 registerHandlers({
   PARSE_TEXT: (request) => runParse(request),
+  HINT: (request) => runHint(request),
   TEST_CONNECTION: (request) => runTestConnection(request.config),
 
   CAPTURE_SELECTION: async (request, sender) => {

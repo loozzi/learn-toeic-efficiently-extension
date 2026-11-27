@@ -61,6 +61,10 @@ export interface RequestMap {
     };
   };
   CANCEL_ANALYZE: { req: { requestId: string }; res: { ok: true } };
+  HINT: {
+    req: { questionId: string; previousHints: string[] };
+    res: { hint: string };
+  };
   TEST_CONNECTION: {
     req: { config: ProviderConfig };
     res: { ok: boolean; message: string };
