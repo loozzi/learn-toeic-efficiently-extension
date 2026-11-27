@@ -151,7 +151,7 @@ it("shows a hint error inline and lets the learner retry", async () => {
 });
 ```
 
-(Check `ErrorBanner` renders `role="alert"`; if not, give the inline error element `role="alert"`.) Add `sendRequest.mockReset()` in a `beforeEach` if the file lacks one.
+(`ErrorBanner` has no role today: add `role="alert"` to its root div — harmless for other users.) Add `sendRequest.mockReset()` in a `beforeEach` if the file lacks one.
 
 - [ ] **Step 2: Run** `npx vitest run src/sidepanel/views/Review.test.tsx` — expect the two new tests FAIL.
 

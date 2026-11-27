@@ -49,7 +49,7 @@ The user picked approach 1.
   collocation, passage clue); each hint more specific than the previous ones; never
   reveal or confirm the answer. Plain text, not JSON. Uses `languageInstruction`
   so it follows the explanation-language setting.
-- **Message** `HINT` in `src/shared/messages.ts`: req `{ requestId, questionId, previousHints: string[] }`,
+- **Message** `HINT` in `src/shared/messages.ts`: req `{ questionId, previousHints: string[] }`,
   res `{ hint: string }`, registered through `registerHandlers`. No cancel channel:
   a late reply to an unmounted Review is simply dropped (builder's call — hints are cheap).
 - **Background** `runHint` in `src/background/aiRunner.ts`: loads the question via
